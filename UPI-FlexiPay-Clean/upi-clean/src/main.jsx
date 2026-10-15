@@ -1,5 +1,6 @@
-import React, { useState, useEffect, Component } from "react";
+import React, { useState, useEffect, Component, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import { HashRouter, useNavigate, useLocation } from "react-router-dom";
 import {
   QrCode,
@@ -21,7 +22,15 @@ import {
   Tag,
   AlertCircle,
   Share2,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  X,
+  Info,
+  Lock,
+  Smartphone,
+  MessageSquare,
+  RefreshCw,
+  CheckCircle2
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import "./index.css";
@@ -410,10 +419,11 @@ function App() {
   };
 
   // Repay dues
-  const handleRepay = () => {
+  const handleRepay = (payAmt, payMode) => {
     const due = creditLimit - credit;
-    if (due <= 0) return;
-    setCredit(creditLimit);
+    const settleAmt = payAmt ? Math.min(due, Math.max(1, Number(payAmt))) : due;
+    if (settleAmt <= 0) return;
+    setCredit((c) => Math.min(creditLimit, c + settleAmt));
     setPoints((p) => p + 50);
 
     const newTx = normalizeTx({
@@ -421,9 +431,9 @@ function App() {
       merchant: "FlexiPay Bill Settlement",
       upiId: "repay@flexipay",
       initials: "FP",
-      amount: due,
+      amount: settleAmt,
       date: "Just now",
-      mode: "HDFC Bank •••• 4812",
+      mode: payMode || "HDFC Bank •••• 4812",
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
       status: "Completed",
       rewardEarned: 50
@@ -598,59 +608,13 @@ function App() {
           })}
         </nav>
 
-        {/* 45-Day Repayment Modal with Timeline Visualizer */}
+        {/* 45-Day Repayment Modal with Timeline Visualizer & Multi-Method Options */}
         {repayModal && (
-          <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-tab-enter">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Pay FlexiPay Bill</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">45-Day Interest-Free Payment Cycle</p>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  0% Interest
-                </span>
-              </div>
-
-              {/* 45-Day Timeline Progress Visualizer */}
-              <div className="my-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-                <div className="flex justify-between text-[11px] font-semibold text-slate-700">
-                  <span>Day 0 (Purchases)</span>
-                  <span className="text-[#F47920] font-bold">Day 32 (Today)</span>
-                  <span>Day 45 (Due)</span>
-                </div>
-                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#F47920] h-full rounded-full" style={{ width: "71%" }}></div>
-                </div>
-                <div className="text-[10px] text-slate-500 text-center">
-                  ⏳ <strong>13 days remaining</strong> to settle with zero interest charges.
-                </div>
-              </div>
-
-              <div className="my-3 p-4 rounded-xl bg-orange-50/50 border border-orange-100">
-                <div className="text-xs text-gray-500">Total Outstanding Due</div>
-                <div className="text-2xl font-black text-gray-900 mt-0.5">
-                  {formatRupee(creditLimit - credit)}
-                </div>
-                <div className="text-xs text-gray-600 mt-2">Auto-Debit via HDFC Bank •••• 4812</div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setRepayModal(false)}
-                  className="flex-1 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={handleRepay}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-[#F47920] hover:bg-[#E06710] rounded-xl shadow-xs transition"
-                >
-                  Settle Bill Now
-                </button>
-              </div>
-            </div>
-          </div>
+          <ConsumerRepayModal
+            dueAmount={creditLimit - credit}
+            onClose={() => setRepayModal(false)}
+            onConfirm={(amt, method) => handleRepay(amt, method)}
+          />
         )}
 
         {/* Account Aggregator (AA) Underwriting Consent Modal */}
@@ -663,9 +627,15 @@ function App() {
         )}
 
         {/* Minimal Receipt Modal */}
-        {selectedTx && (
-          <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-tab-enter">
+        {selectedTx && createPortal(
+          <div
+            className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setSelectedTx(null)}
+          >
+            <div
+              className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-tab-enter my-auto border border-gray-100"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="text-center pb-4 border-b border-gray-100">
                 <div className="w-12 h-12 rounded-full bg-orange-50 text-[#F47920] flex items-center justify-center mx-auto text-base font-bold">
                   {selectedTx.initials || "TX"}
@@ -698,12 +668,13 @@ function App() {
 
               <button
                 onClick={() => setSelectedTx(null)}
-                className="w-full py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl mt-2 transition"
+                className="w-full py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl mt-2 transition cursor-pointer"
               >
                 Close Receipt
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>
@@ -1066,10 +1037,133 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
 }
 
 // ----------------------------------------------------
+// RBI KEY FACT STATEMENT (KFS) MODAL (Sprint 3 / DLG Compliant)
+// ----------------------------------------------------
+function KfsModal({ amount, credit, onClose, onAccept }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 overflow-y-auto animate-tab-enter">
+      <div className="bg-white rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl border border-gray-200 max-h-[90vh] flex flex-col my-auto">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-orange-100 text-[#F47920] flex items-center justify-center">
+              <FileText size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">Key Fact Statement (KFS)</h3>
+              <p className="text-[10px] text-gray-500">RBI Digital Lending Guidelines (DLG) Mandated</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable KFS Content */}
+        <div className="overflow-y-auto space-y-3.5 py-3 text-xs text-gray-700 flex-1 pr-1">
+          {/* Regulated Entity / LSP Info */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-gray-500">Regulated Entity (Lender)</span>
+              <span className="font-bold text-gray-900">Equitas Small Finance Bank</span>
+            </div>
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-gray-500">Lending Service Provider (LSP)</span>
+              <span className="font-semibold text-gray-800">FlexiPay Technologies Pvt Ltd</span>
+            </div>
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="text-gray-500">RBI Registration / License</span>
+              <span className="font-mono text-gray-600">RBI/DLG/SFB/2023-891</span>
+            </div>
+          </div>
+
+          {/* Key Loan Financial Parameters Table */}
+          <div className="border border-gray-200 rounded-xl overflow-hidden text-xs">
+            <div className="bg-gray-100 px-3 py-1.5 font-bold text-gray-800 text-[11px] uppercase tracking-wide">
+              Transaction & Repayment Terms
+            </div>
+            <div className="divide-y divide-gray-100">
+              <div className="px-3 py-2 flex justify-between items-center">
+                <span className="text-gray-600">Sanctioned Drawdown</span>
+                <span className="font-bold text-gray-900">{formatRupee(amount)}</span>
+              </div>
+              <div className="px-3 py-2 flex justify-between items-center">
+                <span className="text-gray-600">Interest-Free Tenure</span>
+                <span className="font-bold text-emerald-700">45 Calendar Days</span>
+              </div>
+              <div className="px-3 py-2 flex justify-between items-center bg-orange-50/40">
+                <span className="text-gray-700 font-medium">Annual Percentage Rate (APR)</span>
+                <span className="font-extrabold text-[#F47920]">0.0% APR (Within 45 Days)</span>
+              </div>
+              <div className="px-3 py-2 flex justify-between items-center">
+                <span className="text-gray-600">Post-Grace Overdue Rate</span>
+                <span className="font-semibold text-gray-700">18.0% p.a. simple interest</span>
+              </div>
+              <div className="px-3 py-2 flex justify-between items-center">
+                <span className="text-gray-600">Origination / Processing Fees</span>
+                <span className="font-semibold text-emerald-700">₹0.00 (Nil)</span>
+              </div>
+              <div className="px-3 py-2 flex justify-between items-center">
+                <span className="text-gray-600">Foreclosure / Prepayment Penalty</span>
+                <span className="font-semibold text-emerald-700">₹0.00 (Nil)</span>
+              </div>
+              <div className="px-3 py-2 flex justify-between items-center">
+                <span className="text-gray-600">Cooling-Off / Look-Up Period</span>
+                <span className="font-bold text-slate-800">3 Days (Exit with 0 penalty)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Borrower Rights & Grievance Mechanism */}
+          <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-[11px] space-y-1.5">
+            <div className="font-bold text-emerald-900 flex items-center gap-1.5">
+              <ShieldCheck size={14} className="text-emerald-700 shrink-0" />
+              <span>Borrower Data Privacy & Protections</span>
+            </div>
+            <p className="text-emerald-800 leading-relaxed text-[10px]">
+              • No access to personal photos, media, or contact list (RBI DLG 4.2 compliant).<br />
+              • Loan recovery follows Fair Practice Code without unconsented calls or harassment.
+            </p>
+            <div className="pt-1 border-t border-emerald-200/60 text-[10px] text-emerald-950 flex justify-between">
+              <span><strong>Nodal Grievance Officer:</strong> Rajesh Sharma</span>
+              <a href="mailto:grievance@flexipay.in" className="underline font-semibold">grievance@flexipay.in</a>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Actions */}
+        <div className="pt-3 border-t border-gray-100 flex gap-2.5">
+          <button
+            onClick={onClose}
+            className="w-1/3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+          >
+            Close
+          </button>
+          <button
+            onClick={() => {
+              onClose();
+              if (onAccept) onAccept();
+            }}
+            className="w-2/3 py-2.5 bg-[#F47920] hover:bg-[#E06710] text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Check size={15} />
+            <span>I Acknowledge & Accept</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
 // PAYMENT VIEW
 // ----------------------------------------------------
 function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }) {
   const isEligible = credit >= amount;
+  const [showKfs, setShowKfs] = useState(false);
 
   return (
     <div className="space-y-6 pt-2">
@@ -1110,6 +1204,25 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
                   Available credit: {formatRupee(credit)} • +25 Reward Points • 45-Day Grace Cycle
+                </div>
+
+                {/* Direct KFS trigger on payment option */}
+                <div className="mt-2 pt-2 border-t border-orange-100 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-600 flex items-center gap-1 font-medium">
+                    <ShieldCheck size={13} className="text-emerald-600" />
+                    <span>RBI DLG Compliant Credit</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowKfs(true);
+                    }}
+                    className="font-bold text-[#F47920] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <FileText size={12} />
+                    <span>View KFS</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1165,10 +1278,30 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
         </div>
       </div>
 
+      {/* Mandatory Regulatory KFS Notice for BNPL */}
+      {method === "later" && (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText size={16} className="text-[#F47920] shrink-0" />
+            <div>
+              <div className="font-bold text-gray-900 text-xs">RBI Key Fact Statement (KFS)</div>
+              <div className="text-[11px] text-gray-500">0% APR for 45 Days • Lender: Equitas SFB</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowKfs(true)}
+            className="text-xs font-bold text-[#F47920] hover:underline px-2.5 py-1 bg-white border border-orange-200 rounded-lg shadow-2xs cursor-pointer"
+          >
+            Review Terms
+          </button>
+        </div>
+      )}
+
       <button
         onClick={onPay}
         disabled={method === "later" && !isEligible}
-        className="w-full py-4 bg-[#F47920] hover:bg-[#E06710] text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50"
+        className="w-full py-4 bg-[#F47920] hover:bg-[#E06710] text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50 cursor-pointer"
       >
         {method === "later"
           ? `Pay ${formatRupee(amount)} via 45-Day Pay Later (0% Interest)`
@@ -1176,6 +1309,18 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
           ? `Pay ${formatRupee(amount)} via SBI UPI`
           : `Pay ${formatRupee(amount)} via HDFC UPI`}
       </button>
+
+      {/* Key Fact Statement Modal */}
+      {showKfs && (
+        <KfsModal
+          amount={amount}
+          credit={credit}
+          onClose={() => setShowKfs(false)}
+          onAccept={() => {
+            setShowKfs(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1547,12 +1692,591 @@ function HistoryView({ transactions, onSelectTx }) {
 }
 
 // ----------------------------------------------------
+// AUTHENTIC BANK-GRADE OTP VERIFICATION COMPONENT
+// ----------------------------------------------------
+function AuthenticOtpVerification({
+  title,
+  actionDesc,
+  phone = "+91 98*** **432",
+  amount,
+  sender = "HDFC Bank",
+  accent = "orange",
+  onSuccess,
+  onBack,
+  submitLabel = "Verify & Authorize"
+}) {
+  const [digits, setDigits] = useState(["", "", "", ""]);
+  const [generatedOtp, setGeneratedOtp] = useState(() => String(Math.floor(1000 + Math.random() * 9000)));
+  const [showSmsPush, setShowSmsPush] = useState(false);
+  const [timer, setTimer] = useState(28);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState("");
+  const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+
+  // Realistic SMS alert arrives after 1.1s delay
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setShowSmsPush(true);
+    }, 1100);
+    return () => clearTimeout(timerId);
+  }, [generatedOtp]);
+
+  // Live countdown ticker
+  useEffect(() => {
+    if (timer <= 0) return;
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  // Auto-focus first input on mount
+  useEffect(() => {
+    inputRefs[0]?.current?.focus();
+  }, []);
+
+  const handleDigitChange = (idx, val) => {
+    setError("");
+    const char = val.slice(-1);
+    if (char && !/^\d$/.test(char)) return;
+
+    const next = [...digits];
+    next[idx] = char;
+    setDigits(next);
+
+    if (char && idx < 3) {
+      inputRefs[idx + 1]?.current?.focus();
+    }
+  };
+
+  const handleKeyDown = (idx, e) => {
+    if (e.key === "Backspace") {
+      if (!digits[idx] && idx > 0) {
+        inputRefs[idx - 1]?.current?.focus();
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    if (!pasted) return;
+    const next = ["", "", "", ""];
+    for (let i = 0; i < pasted.length; i++) {
+      next[i] = pasted[i];
+    }
+    setDigits(next);
+    inputRefs[Math.min(3, pasted.length - 1)]?.current?.focus();
+  };
+
+  const handleAutoFill = () => {
+    setError("");
+    const chars = generatedOtp.split("");
+    setDigits(chars);
+    inputRefs[3]?.current?.focus();
+  };
+
+  const handleResend = () => {
+    setDigits(["", "", "", ""]);
+    setError("");
+    setTimer(30);
+    setShowSmsPush(false);
+    const newCode = String(Math.floor(1000 + Math.random() * 9000));
+    setGeneratedOtp(newCode);
+    inputRefs[0]?.current?.focus();
+  };
+
+  const handleVerify = () => {
+    const entered = digits.join("");
+    if (entered.length < 4) {
+      setError("Please enter the complete 4-digit code.");
+      return;
+    }
+
+    if (entered !== generatedOtp) {
+      setError("Incorrect code. Please enter the OTP received via SMS.");
+      return;
+    }
+
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsVerifying(false);
+      onSuccess();
+    }, 850);
+  };
+
+  const accentBtnClass =
+    accent === "emerald"
+      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+      : accent === "blue"
+      ? "bg-blue-600 hover:bg-blue-700 text-white"
+      : "bg-[#F47920] hover:bg-[#E06710] text-white";
+
+  const accentBorderClass =
+    accent === "emerald"
+      ? "focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+      : accent === "blue"
+      ? "focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+      : "focus:border-[#F47920] focus:ring-1 focus:ring-[#F47920]";
+
+  return (
+    <div className="space-y-4 flex-1 text-center py-1 animate-tab-enter">
+      {/* Authentic Incoming Mobile SMS Push Notification Banner */}
+      {showSmsPush && (
+        <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl flex items-start gap-2.5 border border-slate-700 text-left animate-tab-enter">
+          <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+            <MessageSquare size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-center text-[10px] text-slate-400">
+              <span className="font-bold text-slate-200 uppercase tracking-wider">{sender} • SMS Alert</span>
+              <span>Just now</span>
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1 leading-snug">
+              <strong className="text-white font-mono text-xs font-black tracking-widest">{generatedOtp}</strong> is your authorization code for {actionDesc || "authorization"}{amount ? ` of ${formatRupee(amount)}` : ""}. Valid for 10 mins.
+            </p>
+            <button
+              type="button"
+              onClick={handleAutoFill}
+              className="mt-2 text-[10px] font-extrabold text-orange-400 hover:text-orange-300 bg-orange-500/20 px-2.5 py-1 rounded-md border border-orange-400/30 inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+            >
+              <Smartphone size={11} />
+              <span>Tap to Auto-Fill ({generatedOtp})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Title & Description */}
+      <div>
+        <h4 className="text-base font-extrabold text-slate-900">{title}</h4>
+        <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+          Please enter the 4-digit authorization code sent via SMS to registered mobile <strong>{phone}</strong>.
+        </p>
+      </div>
+
+      {/* 4 Clean Interactive Digit Boxes */}
+      <div className="flex justify-center items-center gap-2.5 sm:gap-3 py-2" onPaste={handlePaste}>
+        {digits.map((digit, idx) => (
+          <input
+            key={idx}
+            ref={inputRefs[idx]}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={1}
+            value={digit}
+            onChange={(e) => handleDigitChange(idx, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(idx, e)}
+            style={{ width: "52px", height: "58px", minWidth: "44px", maxWidth: "56px" }}
+            className={`shrink-0 text-center text-2xl font-black rounded-2xl border-2 transition outline-none bg-slate-50/80 text-slate-900 shadow-xs box-border ${
+              error
+                ? "border-rose-400 bg-rose-50/30 text-rose-900"
+                : digit
+                ? "border-slate-800 bg-white"
+                : "border-slate-200 hover:border-slate-300"
+            } ${accentBorderClass}`}
+          />
+        ))}
+      </div>
+
+      {/* Error Message if Mismatch */}
+      {error && (
+        <p className="text-[11px] font-bold text-rose-600 animate-tab-enter flex items-center justify-center gap-1">
+          <AlertCircle size={13} />
+          <span>{error}</span>
+        </p>
+      )}
+
+      {/* Live Resend Countdown Timer */}
+      <div className="text-xs text-slate-500 flex items-center justify-center gap-1">
+        {timer > 0 ? (
+          <span>Resend OTP in <strong>00:{timer < 10 ? `0${timer}` : timer}</strong></span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            className="text-xs font-bold text-[#F47920] hover:underline cursor-pointer"
+          >
+            Resend OTP via SMS
+          </button>
+        )}
+      </div>
+
+      {/* Bank Grade Security Assurance */}
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+        <Lock size={12} className="text-emerald-600 shrink-0" />
+        <span>256-Bit SSL Bank Grade Security • RBI DLG Mandate</span>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 pt-2">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isVerifying}
+          className="w-1/3 py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={handleVerify}
+          disabled={isVerifying || digits.some((d) => !d)}
+          className={`w-2/3 py-3 font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-2 ${accentBtnClass}`}
+        >
+          {isVerifying ? (
+            <>
+              <RefreshCw size={16} className="animate-spin" />
+              <span>Verifying with Bank Switch...</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={16} />
+              <span>{submitLabel}</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// ADVANCED CONSUMER REPAYMENT MODAL (Sprint 3 Polish)
+// ----------------------------------------------------
+function ConsumerRepayModal({ dueAmount, onClose, onConfirm }) {
+  const [step, setStep] = useState(1); // 1: Amount & Bank, 2: Terms Consent, 3: OTP Verification, 4: Success Receipt
+  const [repayType, setRepayType] = useState("full"); // "full" | "min" | "custom"
+  const [customVal, setCustomVal] = useState(dueAmount);
+  const [method, setMethod] = useState("hdfc"); // "hdfc" | "sbi"
+  const [consent, setConsent] = useState(true);
+
+  const minDue = Math.min(dueAmount, 250);
+  const payAmt =
+    repayType === "full"
+      ? dueAmount
+      : repayType === "min"
+      ? minDue
+      : Math.min(dueAmount, Math.max(1, customVal));
+
+  const handleFinalDone = () => {
+    const bankLabel = method === "sbi" ? "SBI •••• 8912" : "HDFC Bank •••• 4812";
+    onConfirm(payAmt, bankLabel);
+  };
+
+  // Lock background body scroll while popup is open
+  useEffect(() => {
+    const originalStyle = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && step !== 3) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-sm sm:max-w-md p-6 shadow-2xl space-y-5 max-h-[92vh] flex flex-col border border-gray-100 my-auto animate-tab-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
+        
+        {/* Header & Step Bar */}
+        <div className="border-b border-gray-100 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#F47920] text-white flex items-center justify-center shadow-xs">
+                <CreditCard size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-extrabold text-gray-900 leading-tight">
+                  {step === 1 && "Pay FlexiPay Bill"}
+                  {step === 2 && "Settlement Consent"}
+                  {step === 3 && "UPI Authorization PIN"}
+                  {step === 4 && "Bill Settle Completed"}
+                </h3>
+                <p className="text-[10px] text-gray-500">
+                  {step === 1 && "45-Day Interest-Free Payment Cycle"}
+                  {step === 2 && "Confirm zero-interest terms & rewards"}
+                  {step === 3 && "Verify with 4-digit UPI security PIN"}
+                  {step === 4 && "Credit limit replenished instantly"}
+                </p>
+              </div>
+            </div>
+            {step !== 4 && (
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold transition cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Clean Step Pills */}
+          <div className="grid grid-cols-4 gap-1.5 mt-3">
+            {[
+              { num: 1, label: "Amount" },
+              { num: 2, label: "Terms" },
+              { num: 3, label: "PIN" },
+              { num: 4, label: "Done" }
+            ].map((s) => (
+              <div
+                key={s.num}
+                className={`h-1.5 rounded-full transition-all ${
+                  step >= s.num ? "bg-[#F47920]" : "bg-gray-100"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* STEP 1: AMOUNT & BANK SELECTION */}
+        {step === 1 && (
+          <div className="space-y-4 flex-1">
+            {/* 45-Day Progress Box */}
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
+              <div className="flex justify-between text-[11px] font-semibold text-slate-700">
+                <span>Day 0</span>
+                <span className="text-[#F47920] font-bold">Day 32 (Today)</span>
+                <span>Day 45 (Due)</span>
+              </div>
+              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div className="bg-[#F47920] h-full rounded-full" style={{ width: "71%" }}></div>
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-slate-500">
+                <span>⏳ <strong>13 days remaining</strong> in grace cycle</span>
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  0% Interest
+                </span>
+              </div>
+            </div>
+
+            {/* Amount Selection Options */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-700 block">Choose Settlement Amount</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRepayType("full")}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    repayType === "full"
+                      ? "border-[#F47920] bg-orange-50/70 ring-1 ring-[#F47920]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <div className="text-[10px] text-gray-500">Total Due</div>
+                  <div className="text-xs font-black text-gray-900 mt-0.5">{formatRupee(dueAmount)}</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRepayType("min")}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    repayType === "min"
+                      ? "border-[#F47920] bg-orange-50/70 ring-1 ring-[#F47920]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <div className="text-[10px] text-gray-500">Min Due</div>
+                  <div className="text-xs font-black text-gray-900 mt-0.5">{formatRupee(minDue)}</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRepayType("custom");
+                    setCustomVal(Math.round(dueAmount / 2));
+                  }}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    repayType === "custom"
+                      ? "border-[#F47920] bg-orange-50/70 ring-1 ring-[#F47920]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <div className="text-[10px] text-gray-500">Custom</div>
+                  <div className="text-xs font-black text-gray-900 mt-0.5">{formatRupee(customVal)}</div>
+                </button>
+              </div>
+
+              {repayType === "custom" && (
+                <div className="p-2.5 bg-orange-50/40 border border-orange-200 rounded-xl space-y-1.5 animate-tab-enter text-xs">
+                  <div className="flex items-center border border-orange-200 rounded-xl px-3 py-1 bg-white focus-within:border-[#F47920]">
+                    <span className="font-bold text-gray-400 mr-2">₹</span>
+                    <input
+                      type="number"
+                      value={customVal}
+                      onChange={(e) => setCustomVal(Math.min(dueAmount, Math.max(0, Number(e.target.value))))}
+                      className="w-full font-bold text-gray-900 outline-none"
+                      max={dueAmount}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bank Selector */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-700 block">Debit Bank Account</label>
+              <div className="space-y-1.5 text-xs">
+                <label
+                  onClick={() => setMethod("hdfc")}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                    method === "hdfc"
+                      ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <input type="radio" checked={method === "hdfc"} onChange={() => setMethod("hdfc")} className="accent-[#F47920]" />
+                    <span className="font-bold text-gray-900">HDFC Bank •••• 4812</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#F47920] bg-orange-50 px-2 py-0.5 rounded">Default UPI</span>
+                </label>
+
+                <label
+                  onClick={() => setMethod("sbi")}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                    method === "sbi"
+                      ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <input type="radio" checked={method === "sbi"} onChange={() => setMethod("sbi")} className="accent-[#F47920]" />
+                    <span className="font-bold text-gray-900">State Bank of India •••• 8912</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={() => setStep(2)}
+              disabled={payAmt <= 0}
+              className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+            >
+              <span>Review Settlement Terms</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2: TERMS CONSENT */}
+        {step === 2 && (
+          <div className="space-y-4 flex-1 text-xs">
+            <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
+              <div className="p-2.5 flex justify-between">
+                <span className="text-gray-500">Settlement Amount</span>
+                <span className="font-extrabold text-gray-900">{formatRupee(payAmt)}</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-gray-500">Interest Rate Applied</span>
+                <span className="font-bold text-emerald-700">0.0% APR (Within 45 Days)</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-gray-500">Prepayment / Convenience Fee</span>
+                <span className="font-bold text-emerald-700">₹0.00 (Nil)</span>
+              </div>
+              <div className="p-2.5 flex justify-between bg-emerald-50/40">
+                <span className="text-emerald-900 font-semibold">Rewards to Earn</span>
+                <span className="font-bold text-emerald-700">+50 FlexiPay Coins</span>
+              </div>
+            </div>
+
+            <label className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5 accent-[#F47920] shrink-0"
+              />
+              <span className="text-gray-700 text-[11px] leading-relaxed">
+                I authorize instant UPI debit of <strong>{formatRupee(payAmt)}</strong> from {method === "sbi" ? "SBI •••• 8912" : "HDFC Bank •••• 4812"} to settle my FlexiPay bill.
+              </span>
+            </label>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep(1)}
+                className="w-1/3 py-3 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!consent}
+                className="w-2/3 py-3 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <span>Authorize via PIN</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: AUTHENTIC OTP VERIFICATION */}
+        {step === 3 && (
+          <AuthenticOtpVerification
+            title="UPI Debit Authorization"
+            actionDesc="FlexiPay bill settlement"
+            phone="+91 98*** **432"
+            amount={payAmt}
+            sender={method === "sbi" ? "State Bank of India" : "HDFC Bank"}
+            accent="orange"
+            onSuccess={() => setStep(4)}
+            onBack={() => setStep(2)}
+            submitLabel={`Authorize Payment of ${formatRupee(payAmt)}`}
+          />
+        )}
+
+        {/* STEP 4: SUCCESS RECEIPT */}
+        {step === 4 && (
+          <div className="space-y-4 flex-1 text-center py-2 animate-tab-enter">
+            <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <Check size={36} strokeWidth={3} />
+            </div>
+
+            <div>
+              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Bill Settle Complete</span>
+              <h4 className="text-2xl font-black text-gray-900 mt-1">{formatRupee(payAmt)}</h4>
+              <p className="text-xs text-gray-500 mt-1">Paid via {method === "sbi" ? "SBI •••• 8912" : "HDFC Bank •••• 4812"}</p>
+            </div>
+
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-emerald-700 shrink-0" />
+                <span className="text-emerald-900 font-bold">+50 FlexiPay Coins Earned!</span>
+              </div>
+              <span className="text-emerald-800 font-extrabold">Credited</span>
+            </div>
+
+            <button
+              onClick={handleFinalDone}
+              className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md"
+            >
+              Done (View Statement)
+            </button>
+          </div>
+        )}
+
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ----------------------------------------------------
 // ACCOUNT AGGREGATOR (AA) UNDERWRITING MODAL (Sprint 2 / PDF Core)
 // ----------------------------------------------------
 function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
   const [step, setStep] = useState(1); // 1: Bank Selection, 2: OTP Verification & Consent, 3: Precise API Analyzer, 4: Approved Tier
   const [selectedBank, setSelectedBank] = useState("HDFC Bank");
-  const [otp, setOtp] = useState(["4", "8", "1", "2"]);
   const [analyzingStatus, setAnalyzingStatus] = useState("Connecting to RBI NBFC-Account Aggregator (Setu / Finvu)...");
   const [analysisProgress, setAnalysisProgress] = useState(20);
 
@@ -1593,9 +2317,26 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4 animate-tab-enter">
-      <div className="bg-white rounded-3xl w-full max-w-sm sm:max-w-md shadow-2xl relative overflow-hidden border border-slate-100">
+  // Lock background body scroll while popup is open
+  useEffect(() => {
+    const originalStyle = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && step !== 2 && step !== 3) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-sm sm:max-w-md shadow-2xl relative overflow-hidden border border-slate-100 my-auto animate-tab-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Top Header Bar */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/60 to-white">
@@ -1708,16 +2449,9 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
           </div>
         )}
 
-        {/* STEP 2: AA Consent & Mobile OTP Simulation */}
+        {/* STEP 2: AA Consent & Authentic OTP Verification */}
         {step === 2 && (
           <div className="p-5 space-y-4 animate-tab-enter">
-            <div>
-              <h4 className="text-sm font-bold text-gray-900">Authorize AA Data Consent</h4>
-              <p className="text-[11px] text-gray-500 mt-0.5">
-                Confirm digital consent via one-time OTP sent to your Aadhaar-linked mobile (••• 4321).
-              </p>
-            </div>
-
             {/* RBI AA Consent Spec Box */}
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
               <div className="flex justify-between text-[11px]">
@@ -1738,47 +2472,17 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
               </div>
             </div>
 
-            {/* Simulated OTP Box */}
-            <div className="space-y-1.5 text-center">
-              <label className="text-[11px] font-semibold text-gray-600 block">
-                Enter 4-Digit Consent Verification OTP
-              </label>
-              <div className="flex justify-center gap-2.5">
-                {otp.map((d, i) => (
-                  <input
-                    key={i}
-                    type="text"
-                    maxLength={1}
-                    value={d}
-                    readOnly
-                    className="w-11 h-11 text-center font-extrabold text-base border-2 border-orange-200 bg-orange-50/50 rounded-xl text-gray-900 outline-none"
-                  />
-                ))}
-              </div>
-              <span className="text-[10px] text-emerald-600 font-semibold">
-                ✓ Auto-detected OTP from SMS
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-[10px] text-gray-500">
-              <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
-              <span>Encrypted via 256-bit TLS 1.3. Banking credentials are never requested.</span>
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => setStep(1)}
-                className="flex-1 py-3 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleStartAnalysis}
-                className="flex-2 py-3 bg-[#F47920] hover:bg-[#E06710] text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs"
-              >
-                Approve & Run Analysis
-              </button>
-            </div>
+            {/* Authentic Bank-Grade OTP Verification */}
+            <AuthenticOtpVerification
+              title="Authorize AA Data Consent"
+              actionDesc={`sharing encrypted statements from ${selectedBank}`}
+              phone="+91 98*** **432"
+              sender={`RBI AA • ${selectedBank}`}
+              accent="orange"
+              onSuccess={handleStartAnalysis}
+              onBack={() => setStep(1)}
+              submitLabel="Approve & Run Analysis"
+            />
           </div>
         )}
 
@@ -1869,7 +2573,8 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

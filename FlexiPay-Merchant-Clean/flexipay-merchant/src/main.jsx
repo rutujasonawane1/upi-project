@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Store,
@@ -31,7 +32,18 @@ import {
   Smartphone,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Banknote,
+  Wallet,
+  ArrowDownLeft,
+  FileText,
+  Percent,
+  RefreshCw,
+  AlertCircle,
+  Shield,
+  ArrowLeft,
+  Lock,
+  MessageSquare
 } from "lucide-react";
 import "./index.css";
 
@@ -392,8 +404,16 @@ function App() {
     setTimeout(() => setSettledToast(false), 3000);
   };
 
+  const [merchantCreditLimit, setMerchantCreditLimit] = useState(150000);
+  const [merchantBorrowed, setMerchantBorrowed] = useState(() => {
+    const saved = localStorage.getItem("flexiMerchantBorrowed");
+    const num = Number(saved);
+    return isNaN(num) ? 0 : num;
+  });
+
   const navItems = [
     { id: "pos", label: "POS & Bill", icon: CreditCard },
+    { id: "credit", label: "Store Credit", icon: Banknote },
     { id: "transactions", label: `Ledger (${transactions.length})`, icon: Receipt },
     { id: "qr", label: "Standee", icon: QrCode },
     { id: "offers", label: "Offers", icon: Tag },
@@ -927,6 +947,19 @@ function App() {
         )}
 
         {/* ==================================================== */}
+        {/* TAB: STORE WORKING CAPITAL CREDIT LINE (Sprint 3)    */}
+        {/* ==================================================== */}
+        {tab === "credit" && (
+          <StoreCreditTab
+            sales={sales}
+            transactions={transactions}
+            creditLimit={merchantCreditLimit}
+            borrowed={merchantBorrowed}
+            setBorrowed={setMerchantBorrowed}
+          />
+        )}
+
+        {/* ==================================================== */}
         {/* TAB 2: TRANSACTIONS (Responsive Table + Mobile Cards) */}
         {/* ==================================================== */}
         {tab === "transactions" && (
@@ -958,16 +991,22 @@ function App() {
       {/* ---------------------------------------------------- */}
       {/* FULLSCREEN CUSTOMER DISPLAY STANDBY MODAL            */}
       {/* ---------------------------------------------------- */}
-      {customerDisplayOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
+      {customerDisplayOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setCustomerDisplayOpen(false)}
+        >
           <button
             onClick={() => setCustomerDisplayOpen(false)}
-            className="absolute top-4 right-4 text-white/80 hover:text-white p-2 rounded-full bg-white/10"
+            className="absolute top-4 right-4 text-white/80 hover:text-white p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition cursor-pointer"
           >
             <X size={24} />
           </button>
 
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-tab-enter">
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-tab-enter"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="bg-blue-600 -mx-6 -mt-6 p-4 rounded-t-3xl text-white">
               <div className="text-[11px] font-bold uppercase tracking-wider opacity-90">Scan to Pay</div>
               <div className="text-xl font-black mt-0.5">Sharma Super Store</div>
@@ -1000,15 +1039,22 @@ function App() {
               <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-bold">FlexiPay</span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ---------------------------------------------------- */}
       {/* MOBILE-RESPONSIVE TAX INVOICE MODAL (Bottom Sheet)   */}
       {/* ---------------------------------------------------- */}
-      {selectedReceipt && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl animate-tab-enter max-h-[90vh] overflow-y-auto">
+      {selectedReceipt && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+          onClick={() => setSelectedReceipt(null)}
+        >
+          <div
+            className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl animate-tab-enter max-h-[90vh] overflow-y-auto my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -1017,7 +1063,7 @@ function App() {
               </div>
               <button
                 onClick={() => setSelectedReceipt(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1066,7 +1112,7 @@ function App() {
             <div className="mt-4 flex flex-col sm:flex-row gap-2">
               <button
                 onClick={() => window.print()}
-                className="flex-1 py-2.5 bg-slate-900 text-white text-xs font-semibold rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Printer size={14} /> Print Invoice
               </button>
@@ -1074,19 +1120,20 @@ function App() {
                 onClick={() => {
                   alert(`Invoice link sent via WhatsApp to ${selectedReceipt.customer}`);
                 }}
-                className="py-2.5 px-3 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition flex items-center justify-center gap-1"
+                className="py-2.5 px-3 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition flex items-center justify-center gap-1 cursor-pointer"
               >
                 <Share2 size={14} /> WhatsApp
               </button>
               <button
                 onClick={() => setSelectedReceipt(null)}
-                className="py-2.5 px-3 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition"
+                className="py-2.5 px-3 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition cursor-pointer"
               >
                 Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -1547,6 +1594,1129 @@ function AnalyticsTab({ transactions, sales }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// ----------------------------------------------------
+// AUTHENTIC BANKING OTP VERIFICATION COMPONENT
+// ----------------------------------------------------
+function AuthenticOtpVerification({
+  title,
+  actionDesc,
+  phone = "+91 98*** **129",
+  amount,
+  sender = "Equitas SFB",
+  accent = "blue",
+  onSuccess,
+  onBack,
+  submitLabel = "Verify & Authorize"
+}) {
+  const [digits, setDigits] = useState(["", "", "", ""]);
+  const [generatedOtp, setGeneratedOtp] = useState(() => String(Math.floor(1000 + Math.random() * 9000)));
+  const [showSmsPush, setShowSmsPush] = useState(false);
+  const [timer, setTimer] = useState(28);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState("");
+  const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+
+  // Realistic SMS alert arrives after 1.1s delay
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setShowSmsPush(true);
+    }, 1100);
+    return () => clearTimeout(timerId);
+  }, [generatedOtp]);
+
+  // Live countdown ticker
+  useEffect(() => {
+    if (timer <= 0) return;
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  // Auto-focus first input on mount
+  useEffect(() => {
+    inputRefs[0]?.current?.focus();
+  }, []);
+
+  const handleDigitChange = (idx, val) => {
+    setError("");
+    const char = val.slice(-1);
+    if (char && !/^\d$/.test(char)) return;
+
+    const next = [...digits];
+    next[idx] = char;
+    setDigits(next);
+
+    if (char && idx < 3) {
+      inputRefs[idx + 1]?.current?.focus();
+    }
+  };
+
+  const handleKeyDown = (idx, e) => {
+    if (e.key === "Backspace") {
+      if (!digits[idx] && idx > 0) {
+        inputRefs[idx - 1]?.current?.focus();
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    if (!pasted) return;
+    const next = ["", "", "", ""];
+    for (let i = 0; i < pasted.length; i++) {
+      next[i] = pasted[i];
+    }
+    setDigits(next);
+    inputRefs[Math.min(3, pasted.length - 1)]?.current?.focus();
+  };
+
+  const handleAutoFill = () => {
+    setError("");
+    const chars = generatedOtp.split("");
+    setDigits(chars);
+    inputRefs[3]?.current?.focus();
+  };
+
+  const handleResend = () => {
+    setDigits(["", "", "", ""]);
+    setError("");
+    setTimer(30);
+    setShowSmsPush(false);
+    const newCode = String(Math.floor(1000 + Math.random() * 9000));
+    setGeneratedOtp(newCode);
+    inputRefs[0]?.current?.focus();
+  };
+
+  const handleVerify = () => {
+    const entered = digits.join("");
+    if (entered.length < 4) {
+      setError("Please enter the complete 4-digit OTP.");
+      return;
+    }
+
+    if (entered !== generatedOtp) {
+      setError("Incorrect OTP code. Please enter the code received via SMS.");
+      return;
+    }
+
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsVerifying(false);
+      onSuccess();
+    }, 850);
+  };
+
+  const accentBtnClass =
+    accent === "emerald"
+      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+      : accent === "orange"
+      ? "bg-[#F47920] hover:bg-[#E06710] text-white"
+      : "bg-blue-600 hover:bg-blue-700 text-white";
+
+  const accentBorderClass =
+    accent === "emerald"
+      ? "focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+      : accent === "orange"
+      ? "focus:border-[#F47920] focus:ring-1 focus:ring-[#F47920]"
+      : "focus:border-blue-600 focus:ring-1 focus:ring-blue-600";
+
+  return (
+    <div className="space-y-4 flex-1 text-center py-1 animate-tab-enter">
+      {/* Authentic Incoming Mobile SMS Push Notification Banner */}
+      {showSmsPush && (
+        <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl flex items-start gap-2.5 border border-slate-700 text-left animate-tab-enter">
+          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+            <MessageSquare size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-center text-[10px] text-slate-400">
+              <span className="font-bold text-slate-200 uppercase tracking-wider">{sender} • SMS Alert</span>
+              <span>Just now</span>
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1 leading-snug">
+              <strong className="text-white font-mono text-xs font-black tracking-widest">{generatedOtp}</strong> is your authorization code for {actionDesc || "transaction"} of {formatRupee(amount)}. Valid for 10 mins.
+            </p>
+            <button
+              type="button"
+              onClick={handleAutoFill}
+              className="mt-2 text-[10px] font-extrabold text-blue-400 hover:text-blue-300 bg-blue-500/20 px-2.5 py-1 rounded-md border border-blue-400/30 inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+            >
+              <Smartphone size={11} />
+              <span>Tap to Auto-Fill ({generatedOtp})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Title & Description */}
+      <div>
+        <h4 className="text-base font-extrabold text-slate-900">{title}</h4>
+        <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+          Please enter the 4-digit authorization code sent via SMS to registered mobile <strong>{phone}</strong>.
+        </p>
+      </div>
+
+      {/* 4 Clean Interactive Digit Boxes */}
+      <div className="flex justify-center items-center gap-2.5 sm:gap-3 py-2" onPaste={handlePaste}>
+        {digits.map((digit, idx) => (
+          <input
+            key={idx}
+            ref={inputRefs[idx]}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={1}
+            value={digit}
+            onChange={(e) => handleDigitChange(idx, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(idx, e)}
+            style={{ width: "52px", height: "58px", minWidth: "44px", maxWidth: "56px" }}
+            className={`shrink-0 text-center text-2xl font-black rounded-2xl border-2 transition outline-none bg-slate-50/80 text-slate-900 shadow-xs box-border ${
+              error
+                ? "border-rose-400 bg-rose-50/30 text-rose-900"
+                : digit
+                ? "border-slate-800 bg-white"
+                : "border-slate-200 hover:border-slate-300"
+            } ${accentBorderClass}`}
+          />
+        ))}
+      </div>
+
+      {/* Error Message if Mismatch */}
+      {error && (
+        <p className="text-[11px] font-bold text-rose-600 animate-tab-enter flex items-center justify-center gap-1">
+          <AlertCircle size={13} />
+          <span>{error}</span>
+        </p>
+      )}
+
+      {/* Live Resend Countdown Timer */}
+      <div className="text-xs text-slate-500 flex items-center justify-center gap-1">
+        {timer > 0 ? (
+          <span>Resend OTP in <strong>00:{timer < 10 ? `0${timer}` : timer}</strong></span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+          >
+            Resend OTP via SMS
+          </button>
+        )}
+      </div>
+
+      {/* Bank Grade Security Assurance */}
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+        <Lock size={12} className="text-emerald-600 shrink-0" />
+        <span>256-Bit SSL Bank Grade Security • RBI DLG Mandate</span>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 pt-2">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isVerifying}
+          className="w-1/3 py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={handleVerify}
+          disabled={isVerifying || digits.some((d) => !d)}
+          className={`w-2/3 py-3 font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-2 ${accentBtnClass}`}
+        >
+          {isVerifying ? (
+            <>
+              <RefreshCw size={16} className="animate-spin" />
+              <span>Verifying with SFB Switch...</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={16} />
+              <span>{submitLabel}</span>
+            </>
+          )}
+        </button>
+      </div>
+
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// UNCLUTTERED 4-STEP DRAW CREDIT WIZARD (KFS Consent & OTP Flow)
+// ----------------------------------------------------
+function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onConfirm }) {
+  const [step, setStep] = useState(1); // 1: Amount & Tenure, 2: KFS Consent, 3: OTP Verification, 4: Success Receipt
+  const [amount, setAmount] = useState(Math.min(25000, availableCredit));
+  const [tenureDays, setTenureDays] = useState(60); // 30, 60, 90
+  const [kfsConsent, setKfsConsent] = useState(true);
+  const [utr] = useState(() => "IMPS" + Math.floor(400000000000 + Math.random() * 900000000000));
+
+  // Dynamic EDI Calculations
+  const monthlyRate = 0.0099; // 0.99% / month
+  const tenureMonths = tenureDays / 30;
+  const estimatedInterest = Math.round(amount * monthlyRate * tenureMonths);
+  const totalRepayable = amount + estimatedInterest;
+  const dailyEdi = Math.ceil(totalRepayable / tenureDays);
+
+  // Lock background body scroll while popup is open
+  useEffect(() => {
+    const originalStyle = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
+  const handleFinalDone = () => {
+    onConfirm(amount);
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && step !== 3) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-5 my-auto border border-slate-100 max-h-[92vh] flex flex-col animate-tab-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
+        
+        {/* Header & Step Indicator */}
+        <div className="border-b border-slate-100 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                <Banknote size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
+                  {step === 1 && "Draw Store Credit"}
+                  {step === 2 && "Key Fact Statement (KFS)"}
+                  {step === 3 && "Security Verification"}
+                  {step === 4 && "Disbursal Successful"}
+                </h3>
+                <p className="text-[10px] text-slate-500">
+                  {step === 1 && "Configure amount and repayment velocity"}
+                  {step === 2 && "RBI Digital Lending Guidelines (DLG)"}
+                  {step === 3 && "Verify with 4-digit authorization OTP"}
+                  {step === 4 && "Funds routed directly via instant IMPS"}
+                </p>
+              </div>
+            </div>
+            {step !== 4 && (
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold transition cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Clean Step Pills */}
+          <div className="grid grid-cols-4 gap-1.5 mt-3">
+            {[
+              { num: 1, label: "Amount" },
+              { num: 2, label: "KFS" },
+              { num: 3, label: "OTP" },
+              { num: 4, label: "Done" }
+            ].map((s) => (
+              <div
+                key={s.num}
+                className={`h-1.5 rounded-full transition-all ${
+                  step >= s.num ? "bg-blue-600" : "bg-slate-100"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* STEP 1: AMOUNT & REPAYMENT CONFIG (Uncluttered & Spacious) */}
+        {step === 1 && (
+          <div className="space-y-4 flex-1">
+            <div className="space-y-1.5 text-center">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Available Line: {formatRupee(availableCredit)}
+              </span>
+              <div className="flex items-center justify-center border-2 border-slate-200 rounded-2xl p-3 focus-within:border-blue-600 transition bg-slate-50/50">
+                <span className="text-3xl font-black text-slate-400 mr-2">₹</span>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(Math.min(availableCredit, Math.max(0, Number(e.target.value))))}
+                  className="w-48 text-3xl font-black text-slate-900 outline-none bg-transparent text-center"
+                  max={availableCredit}
+                />
+              </div>
+            </div>
+
+            {/* Smart Presets */}
+            <div className="grid grid-cols-4 gap-2">
+              {[10000, 25000, 50000].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setAmount(Math.min(availableCredit, preset))}
+                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                    amount === preset
+                      ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  ₹{(preset / 1000)}k
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setAmount(availableCredit)}
+                className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                  amount === availableCredit
+                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                    : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                }`}
+              >
+                Max Line
+              </button>
+            </div>
+
+            {/* Repayment Velocity Choice */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Choose Repayment Velocity</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { days: 30, title: "30 Days", tag: "Fast" },
+                  { days: 60, title: "60 Days", tag: "Recommended" },
+                  { days: 90, title: "90 Days", tag: "Low Stress" }
+                ].map((plan) => {
+                  const estEdi = Math.ceil((amount + (amount * monthlyRate * (plan.days / 30))) / plan.days);
+                  return (
+                    <button
+                      key={plan.days}
+                      type="button"
+                      onClick={() => setTenureDays(plan.days)}
+                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                        tenureDays === plan.days
+                          ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold text-slate-900">{plan.title}</div>
+                      <div className="text-xs font-black text-blue-700 mt-0.5">{formatRupee(estEdi)}/d</div>
+                      <div className="text-[9px] text-slate-500 mt-0.5">{plan.tag}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Destination Bank Account Mini Bar */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-slate-700">Credit into: <strong>HDFC Bank •••• 9921</strong></span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                IMPS Instant
+              </span>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={() => setStep(2)}
+              disabled={amount <= 0 || amount > availableCredit}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              <span>Review Key Fact Statement (KFS)</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2: KEY FACT STATEMENT (KFS) CONSENT */}
+        {step === 2 && (
+          <div className="space-y-4 flex-1">
+            <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl text-[11px] text-blue-900 flex items-center justify-between">
+              <span>Lender: <strong>Equitas Small Finance Bank Ltd.</strong></span>
+              <span className="font-mono text-[10px] text-blue-700">RBI/DLG/SFB/891</span>
+            </div>
+
+            {/* KFS Financial Disclosures Table */}
+            <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 text-xs">
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Sanctioned Drawdown</span>
+                <span className="font-extrabold text-slate-900">{formatRupee(amount)}</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Net Disbursal to Bank</span>
+                <span className="font-extrabold text-emerald-700">{formatRupee(amount)} (100%)</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Daily EDI Deduction</span>
+                <span className="font-bold text-blue-700">{formatRupee(dailyEdi)} / day</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Interest Rate (Reducing)</span>
+                <span className="font-semibold text-slate-800">0.99% / mo (Flat ~{formatRupee(estimatedInterest)})</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Processing Fee</span>
+                <span className="font-bold text-emerald-700">₹0.00 (Waived)</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Pre-closure Penalty</span>
+                <span className="font-bold text-emerald-700">₹0.00 (Nil)</span>
+              </div>
+              <div className="p-2.5 flex justify-between bg-slate-50/60">
+                <span className="text-slate-500">Cooling-Off / Look-Up</span>
+                <span className="font-semibold text-slate-800">3 Days (Exit with 0 fee)</span>
+              </div>
+            </div>
+
+            {/* Mandatory Regulatory Consent Checkbox */}
+            <label className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-2.5 cursor-pointer text-xs">
+              <input
+                type="checkbox"
+                checked={kfsConsent}
+                onChange={(e) => setKfsConsent(e.target.checked)}
+                className="mt-0.5 accent-blue-600 shrink-0"
+              />
+              <span className="text-slate-700 text-[11px] leading-relaxed">
+                I have read and agree to the <strong>Key Fact Statement (KFS)</strong> terms and authorize daily EDI holdback sweeps from QR settlements under RBI Digital Lending Guidelines.
+              </span>
+            </label>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep(1)}
+                className="w-1/3 py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1"
+              >
+                <ArrowLeft size={14} /> Back
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!kfsConsent}
+                className="w-2/3 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <span>Accept & Request OTP</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: AUTHENTIC OTP VERIFICATION */}
+        {step === 3 && (
+          <AuthenticOtpVerification
+            title="Enter Authorization OTP"
+            actionDesc="credit line disbursal"
+            amount={amount}
+            phone="+91 98*** **129"
+            sender="Equitas SFB"
+            accent="blue"
+            onSuccess={() => setStep(4)}
+            onBack={() => setStep(2)}
+            submitLabel={`Verify & Disburse ${formatRupee(amount)}`}
+          />
+        )}
+
+        {/* STEP 4: SUCCESS RECEIPT */}
+        {step === 4 && (
+          <div className="space-y-4 flex-1 text-center py-2 animate-tab-enter">
+            <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <Check size={36} strokeWidth={3} />
+            </div>
+
+            <div>
+              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">IMPS Disbursal Completed</span>
+              <h4 className="text-2xl font-black text-slate-900 mt-1">{formatRupee(amount)}</h4>
+              <p className="text-xs text-slate-500 mt-1">
+                Credited directly to <strong>HDFC Bank Current A/C •••• 9921</strong>
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">IMPS Reference No:</span>
+                <span className="font-mono font-bold text-slate-900">{utr}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Daily EDI Holdback:</span>
+                <span className="font-bold text-blue-700">{formatRupee(dailyEdi)} / day</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Repayment Period:</span>
+                <span className="font-semibold text-slate-800">{tenureDays} Days (Starting 11:59 PM)</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleFinalDone}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md"
+            >
+              Done (Return to Store Credit)
+            </button>
+          </div>
+        )}
+
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ----------------------------------------------------
+// UNCLUTTERED 4-STEP REPAY CREDIT WIZARD (Consent & OTP Flow)
+// ----------------------------------------------------
+function RepayCreditModal({ borrowed, creditLimit, sales, onClose, onConfirm }) {
+  const [step, setStep] = useState(1); // 1: Amount & Source, 2: Terms & Consent, 3: OTP Verification, 4: Success Receipt
+  const [repayType, setRepayType] = useState("full"); // "full" | "custom"
+  const [customAmount, setCustomAmount] = useState(borrowed);
+  const [source, setSource] = useState("bank"); // "bank" | "settlement" | "upi"
+  const [repayConsent, setRepayConsent] = useState(true);
+  const [utr] = useState(() => "REP" + Math.floor(400000000000 + Math.random() * 900000000000));
+
+  const effectiveAmount = repayType === "full" ? borrowed : Math.min(borrowed, Math.max(100, customAmount));
+  const restoredCredit = creditLimit - (borrowed - effectiveAmount);
+  const savedInterest = Math.round(effectiveAmount * 0.0099 * 1.5);
+
+  // Lock background body scroll while popup is open
+  useEffect(() => {
+    const originalStyle = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
+  const handleFinalDone = () => {
+    onConfirm(effectiveAmount);
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && step !== 3) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-5 my-auto border border-slate-100 max-h-[92vh] flex flex-col animate-tab-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
+        
+        {/* Header & Step Indicator */}
+        <div className="border-b border-slate-100 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                <ArrowDownLeft size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
+                  {step === 1 && "Repay Store Credit"}
+                  {step === 2 && "Pre-Closure Consent"}
+                  {step === 3 && "Mandate Authorization"}
+                  {step === 4 && "Repayment Completed"}
+                </h3>
+                <p className="text-[10px] text-slate-500">
+                  {step === 1 && "Select repayment amount and funding source"}
+                  {step === 2 && "Review loan clearance terms and savings"}
+                  {step === 3 && "Enter 4-digit authorization security PIN"}
+                  {step === 4 && "Credit limit replenished immediately"}
+                </p>
+              </div>
+            </div>
+            {step !== 4 && (
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold transition cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Clean Step Pills */}
+          <div className="grid grid-cols-4 gap-1.5 mt-3">
+            {[
+              { num: 1, label: "Amount" },
+              { num: 2, label: "Consent" },
+              { num: 3, label: "OTP" },
+              { num: 4, label: "Done" }
+            ].map((s) => (
+              <div
+                key={s.num}
+                className={`h-1.5 rounded-full transition-all ${
+                  step >= s.num ? "bg-emerald-600" : "bg-slate-100"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* STEP 1: REPAYMENT AMOUNT & SOURCE */}
+        {step === 1 && (
+          <div className="space-y-4 flex-1">
+            {/* Outstanding Hero Card */}
+            <div className="p-3.5 rounded-2xl bg-slate-900 text-white text-center space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active Loan Balance</span>
+              <div className="text-2xl font-black">{formatRupee(borrowed)}</div>
+              <div className="text-[10px] text-emerald-400 font-semibold">Zero Pre-closure charges</div>
+            </div>
+
+            {/* Full vs Partial Tabs */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Select Settlement Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRepayType("full")}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    repayType === "full"
+                      ? "border-emerald-600 bg-emerald-50/70 ring-1 ring-emerald-600"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="text-xs font-bold text-slate-900">Full Settlement</div>
+                  <div className="text-sm font-black text-emerald-700 mt-0.5">{formatRupee(borrowed)}</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRepayType("custom");
+                    setCustomAmount(Math.round(borrowed / 2));
+                  }}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    repayType === "custom"
+                      ? "border-emerald-600 bg-emerald-50/70 ring-1 ring-emerald-600"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="text-xs font-bold text-slate-900">Custom Partial</div>
+                  <div className="text-sm font-black text-blue-700 mt-0.5">{formatRupee(customAmount)}</div>
+                </button>
+              </div>
+
+              {repayType === "custom" && (
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-tab-enter text-xs">
+                  <div className="flex items-center border border-slate-300 rounded-xl px-3 py-1.5 bg-white focus-within:border-emerald-600">
+                    <span className="font-bold text-slate-400 mr-2">₹</span>
+                    <input
+                      type="number"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(Math.min(borrowed, Math.max(0, Number(e.target.value))))}
+                      className="w-full font-bold text-slate-900 outline-none"
+                      max={borrowed}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[0.25, 0.5, 0.75, 1.0].map((frac) => (
+                      <button
+                        key={frac}
+                        type="button"
+                        onClick={() => setCustomAmount(Math.round(borrowed * frac))}
+                        className="py-1 text-[10px] font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-100"
+                      >
+                        {frac * 100}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Repayment Channel */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">Select Payment Channel</label>
+              <div className="space-y-1.5 text-xs">
+                <label
+                  onClick={() => setSource("bank")}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                    source === "bank"
+                      ? "border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <input type="radio" checked={source === "bank"} onChange={() => setSource("bank")} className="accent-emerald-600" />
+                    <div>
+                      <div className="font-bold text-slate-900">HDFC Bank Auto-Debit (•••• 9921)</div>
+                      <div className="text-[10px] text-slate-500">Verified IMPS e-Mandate</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Default</span>
+                </label>
+
+                <label
+                  onClick={() => setSource("settlement")}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                    source === "settlement"
+                      ? "border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <input type="radio" checked={source === "settlement"} onChange={() => setSource("settlement")} className="accent-emerald-600" />
+                    <div>
+                      <div className="font-bold text-slate-900">Offset Today's QR Collections</div>
+                      <div className="text-[10px] text-slate-500">Balance: {formatRupee(sales)} available</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Instant Sweep</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={() => setStep(2)}
+              disabled={effectiveAmount <= 0}
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+            >
+              <span>Review &amp; Authorize Repayment</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2: PRE-CLOSURE TERMS & CONSENT */}
+        {step === 2 && (
+          <div className="space-y-4 flex-1">
+            <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 text-xs">
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Settlement Sum</span>
+                <span className="font-extrabold text-slate-900">{formatRupee(effectiveAmount)}</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Restored Credit Line</span>
+                <span className="font-bold text-emerald-700">{formatRupee(restoredCredit)}</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Pre-Payment Charges</span>
+                <span className="font-bold text-emerald-700">₹0.00 (Zero Penalty)</span>
+              </div>
+              <div className="p-2.5 flex justify-between">
+                <span className="text-slate-500">Future Interest Saved</span>
+                <span className="font-semibold text-emerald-700">~{formatRupee(savedInterest)}</span>
+              </div>
+            </div>
+
+            {/* Checkbox Consent */}
+            <label className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-2.5 cursor-pointer text-xs">
+              <input
+                type="checkbox"
+                checked={repayConsent}
+                onChange={(e) => setRepayConsent(e.target.checked)}
+                className="mt-0.5 accent-emerald-600 shrink-0"
+              />
+              <span className="text-slate-700 text-[11px] leading-relaxed">
+                I authorize early repayment of <strong>{formatRupee(effectiveAmount)}</strong> via {source === "settlement" ? "QR settlement sweep" : "HDFC auto-debit"} towards store credit line clearance.
+              </span>
+            </label>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep(1)}
+                className="w-1/3 py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer flex items-center justify-center gap-1"
+              >
+                <ArrowLeft size={14} /> Back
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!repayConsent}
+                className="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <span>Proceed to OTP</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: AUTHENTIC OTP VERIFICATION */}
+        {step === 3 && (
+          <AuthenticOtpVerification
+            title="Mandate Authorization"
+            actionDesc="working capital repayment"
+            amount={effectiveAmount}
+            phone="+91 98*** **129"
+            sender="Equitas SFB"
+            accent="emerald"
+            onSuccess={() => setStep(4)}
+            onBack={() => setStep(2)}
+            submitLabel={`Authorize Repay of ${formatRupee(effectiveAmount)}`}
+          />
+        )}
+
+        {/* STEP 4: SUCCESS RECEIPT */}
+        {step === 4 && (
+          <div className="space-y-4 flex-1 text-center py-2 animate-tab-enter">
+            <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <Check size={36} strokeWidth={3} />
+            </div>
+
+            <div>
+              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Repayment Successful</span>
+              <h4 className="text-2xl font-black text-slate-900 mt-1">{formatRupee(effectiveAmount)}</h4>
+              <p className="text-xs text-slate-500 mt-1">
+                Store credit line replenished to <strong>{formatRupee(restoredCredit)}</strong>
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Settlement UTR:</span>
+                <span className="font-mono font-bold text-slate-900">{utr}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Channel:</span>
+                <span className="font-semibold text-slate-800">
+                  {source === "settlement" ? "Today's QR Collections Sweep" : "HDFC Bank Auto-Debit"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Foreclosure Fee:</span>
+                <span className="font-bold text-emerald-700">₹0.00 (Nil)</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleFinalDone}
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md"
+            >
+              Done (Return to Store Credit)
+            </button>
+          </div>
+        )}
+
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ----------------------------------------------------
+// STORE WORKING CAPITAL CREDIT LINE TAB (Sprint 3 / PDF Core)
+// ----------------------------------------------------
+function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowed }) {
+  const [drawModal, setDrawModal] = useState(false);
+  const [repayModal, setRepayModal] = useState(false);
+  const [successToast, setSuccessToast] = useState("");
+  const availableCredit = creditLimit - borrowed;
+
+  const handleDrawConfirm = (amount) => {
+    const nextBorrowed = borrowed + amount;
+    setBorrowed(nextBorrowed);
+    localStorage.setItem("flexiMerchantBorrowed", String(nextBorrowed));
+    setDrawModal(false);
+    setSuccessToast(`✓ Successfully disbursed ${formatRupee(amount)} via IMPS to HDFC Bank A/C •••• 9921!`);
+    setTimeout(() => setSuccessToast(""), 6000);
+  };
+
+  const handleRepayConfirm = (amount) => {
+    const nextBorrowed = Math.max(0, borrowed - amount);
+    setBorrowed(nextBorrowed);
+    localStorage.setItem("flexiMerchantBorrowed", String(nextBorrowed));
+    setRepayModal(false);
+    setSuccessToast(`✓ Repayment of ${formatRupee(amount)} successful! Restored credit line to ${formatRupee(creditLimit - nextBorrowed)}.`);
+    setTimeout(() => setSuccessToast(""), 6000);
+  };
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold flex items-center gap-2 shadow-xs animate-tab-enter">
+          <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
+      {/* Main Hero Working Capital Card */}
+      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white p-5 sm:p-7 rounded-3xl shadow-xl relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30">
+                Merchant Working Capital Line
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                ● Pre-Sanctioned via GSTR
+              </span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+              {formatRupee(availableCredit)}
+            </h2>
+            <p className="text-xs text-blue-200 max-w-md">
+              Instant revolving credit for inventory & vendor payouts. Based on your daily UPI QR throughput and GSTR-3B filings.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <button
+              onClick={() => setDrawModal(true)}
+              disabled={availableCredit <= 0}
+              className="px-5 py-3.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Banknote size={16} />
+              <span>Draw to Bank Account</span>
+            </button>
+            {borrowed > 0 && (
+              <button
+                onClick={() => setRepayModal(true)}
+                className="px-4 py-3.5 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-xl text-xs sm:text-sm font-bold border border-emerald-400/40 transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <ArrowDownLeft size={16} />
+                <span>Repay {formatRupee(borrowed)}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 3 Metric Stats along bottom */}
+        <div className="mt-6 pt-5 border-t border-white/10 grid grid-cols-3 gap-2 text-center text-xs">
+          <div>
+            <span className="text-[10px] text-blue-300 block">Total Sanctioned</span>
+            <span className="font-bold text-sm">{formatRupee(creditLimit)}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-blue-300 block">Daily Auto-Deduction (EDI)</span>
+            <span className="font-bold text-sm text-emerald-400">
+              {borrowed > 0 ? "₹350 / day" : "₹0 (No active draw)"}
+            </span>
+          </div>
+          <div>
+            <span className="text-[10px] text-blue-300 block">Interest Rate</span>
+            <span className="font-bold text-sm">0.99% / mo</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Underwriting Breakdown: QR Collections + GSTR Integration */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        
+        {/* Card 1: GSTR & QR Data Intelligence */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900">Digital Underwriting Intelligence</h3>
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              Verified GSTN
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Credit limits dynamically increase as your store processes higher daily UPI & FlexiPay volume.
+          </p>
+
+          <div className="space-y-3 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-slate-900">GSTIN 27AABCU9603R1ZM</div>
+                <div className="text-[10px] text-slate-500">GSTR-3B Average Turnover: ₹4.8 Lakhs / mo</div>
+              </div>
+              <span className="text-emerald-600 font-bold text-[11px]">Clean</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-slate-900">Daily QR Velocity</div>
+                <div className="text-[10px] text-slate-500">Today: {formatRupee(sales)} across {transactions.length} orders</div>
+              </div>
+              <span className="text-blue-600 font-bold text-[11px]">Growing</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-purple-50 border border-purple-100 text-purple-900 text-[11px]">
+              💡 <strong>Growth Tip:</strong> Process ₹5,000 more in customer FlexiPay orders this week to unlock a ₹2,00,000 credit limit.
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: EDI Repayment Mechanism */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900">Equated Daily Installment (EDI)</h3>
+            {borrowed > 0 && (
+              <button
+                onClick={() => setRepayModal(true)}
+                className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <span>Prepay Early</span> &gt;
+              </button>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Zero bulk monthly EMI stress. Repayments automatically deduct in tiny micro-amounts from daily QR collections before bank settlement.
+          </p>
+
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Active Drawn Principal:</span>
+              <span className="font-bold text-slate-900">{formatRupee(borrowed)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Daily EDI Holdback:</span>
+              <span className="font-bold text-emerald-700">
+                {borrowed > 0 ? "₹350 from today's payout" : "₹0.00 (No active draw)"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Lender Partner:</span>
+              <span className="font-bold text-slate-800">Equitas Small Finance Bank</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200 pt-2 text-[11px]">
+              <span className="text-slate-500">Early Pre-Closure Fee:</span>
+              <span className="font-bold text-emerald-700">₹0.00 (Zero Penalty)</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+            <ShieldCheck size={16} className="text-blue-600 shrink-0" />
+            <span>Compliant with RBI Digital Lending Framework for MSMEs.</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Advanced Draw Funds Modal */}
+      {drawModal && (
+        <DrawCreditModal
+          availableCredit={availableCredit}
+          creditLimit={creditLimit}
+          borrowed={borrowed}
+          onClose={() => setDrawModal(false)}
+          onConfirm={handleDrawConfirm}
+        />
+      )}
+
+      {/* Advanced Repay Funds Modal */}
+      {repayModal && (
+        <RepayCreditModal
+          borrowed={borrowed}
+          creditLimit={creditLimit}
+          sales={sales}
+          onClose={() => setRepayModal(false)}
+          onConfirm={handleRepayConfirm}
+        />
+      )}
+
     </div>
   );
 }
