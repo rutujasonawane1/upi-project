@@ -58,7 +58,7 @@ class ErrorBoundary extends Component {
             </p>
             <button
               onClick={this.handleReset}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition"
+              className="w-full py-2.5 bg-[#F47920] text-white rounded-xl text-xs font-semibold hover:bg-[#E06710] transition"
             >
               Reset Data & Reload
             </button>
@@ -301,11 +301,11 @@ function App() {
         <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-20">
           {location.pathname === "/" ? (
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-sm">
+              <div className="w-9 h-9 rounded-full bg-[#002855] text-white flex items-center justify-center font-bold text-sm shadow-xs">
                 R
               </div>
               <div>
-                <div className="text-sm font-semibold text-gray-900">Rahul Sharma</div>
+                <div className="text-sm font-bold text-gray-900">Rahul Sharma</div>
                 <div className="text-xs text-gray-500">rahul@flexipay</div>
               </div>
             </div>
@@ -315,7 +315,7 @@ function App() {
               className="p-1 -ml-1 text-gray-700 hover:text-black flex items-center gap-2"
             >
               <ArrowLeft size={20} />
-              <span className="text-sm font-medium">
+              <span className="text-sm font-semibold">
                 {location.pathname === "/scan"
                   ? "Scan QR"
                   : location.pathname === "/pay"
@@ -336,7 +336,7 @@ function App() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate("/qr")}
-              className="p-2 text-gray-600 hover:bg-gray-50 rounded-full"
+              className="p-2 text-gray-600 hover:bg-orange-50 hover:text-[#F47920] rounded-full transition"
               title="My QR"
             >
               <QrCode size={20} />
@@ -412,10 +412,23 @@ function App() {
               onRepayClick={() => setRepayModal(true)}
             />
           )}
+
+          {/* Fallback to Home if unknown route */}
+          {!["/", "/scan", "/pay", "/success", "/qr", "/rewards", "/history", "/profile"].includes(location.pathname) && (
+            <HomeView
+              credit={credit}
+              creditLimit={creditLimit}
+              transactions={transactions}
+              points={points}
+              navigate={navigate}
+              onSelectTx={(tx) => setSelectedTx(tx)}
+              onRepayClick={() => setRepayModal(true)}
+            />
+          )}
         </main>
 
         {/* Bottom 4-Item Minimal Navigation */}
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-2.5 px-3 z-20">
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-2.5 px-3 z-20 shadow-md">
           {navItems.map(({ path, label, icon: Icon }) => {
             const active = location.pathname === path;
             return (
@@ -423,10 +436,10 @@ function App() {
                 key={path}
                 onClick={() => navigate(path)}
                 className={`flex flex-col items-center gap-1 text-xs py-1 px-3 rounded-xl transition ${
-                  active ? "text-blue-600 font-semibold" : "text-gray-500 hover:text-gray-900"
+                  active ? "text-[#F47920] font-bold" : "text-gray-500 hover:text-gray-900"
                 }`}
               >
-                <Icon size={20} />
+                <Icon size={20} className={active ? "text-[#F47920]" : "text-gray-500"} />
                 <span>{label}</span>
               </button>
             );
@@ -437,12 +450,12 @@ function App() {
         {repayModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-tab-enter">
-              <h3 className="text-base font-semibold text-gray-900">Pay FlexiPay Bill</h3>
+              <h3 className="text-base font-bold text-gray-900">Pay FlexiPay Bill</h3>
               <p className="text-xs text-gray-500 mt-0.5">Due on 5 Nov • 0% Interest</p>
 
-              <div className="my-5 p-4 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="my-5 p-4 rounded-xl bg-orange-50/50 border border-orange-100">
                 <div className="text-xs text-gray-500">Amount Due</div>
-                <div className="text-2xl font-bold text-gray-900 mt-0.5">
+                <div className="text-2xl font-black text-gray-900 mt-0.5">
                   {formatRupee(creditLimit - credit)}
                 </div>
                 <div className="text-xs text-gray-600 mt-2">Paying via HDFC Bank •••• 4812</div>
@@ -457,7 +470,7 @@ function App() {
                 </button>
                 <button
                   onClick={handleRepay}
-                  className="flex-1 py-3 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl"
+                  className="flex-1 py-3 text-sm font-bold text-white bg-[#F47920] hover:bg-[#E06710] rounded-xl shadow-xs transition"
                 >
                   Pay Now
                 </button>
@@ -471,10 +484,10 @@ function App() {
           <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-tab-enter">
               <div className="text-center pb-4 border-b border-gray-100">
-                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-base font-bold">
+                <div className="w-12 h-12 rounded-full bg-orange-50 text-[#F47920] flex items-center justify-center mx-auto text-base font-bold">
                   {selectedTx.initials || "TX"}
                 </div>
-                <div className="text-2xl font-bold text-gray-900 mt-2">
+                <div className="text-2xl font-black text-gray-900 mt-2">
                   {formatRupee(selectedTx.amount)}
                 </div>
                 <div className="text-sm font-semibold text-gray-900 mt-0.5">{selectedTx.merchant}</div>
@@ -484,7 +497,7 @@ function App() {
               <div className="py-4 space-y-2.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Paid Using</span>
-                  <span className="font-medium text-gray-900">{selectedTx.mode || "FlexiPay"}</span>
+                  <span className="font-semibold text-gray-900">{selectedTx.mode || "FlexiPay"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">UPI Ref (UTR)</span>
@@ -492,17 +505,17 @@ function App() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Rewards Earned</span>
-                  <span className="font-semibold text-emerald-700">+{selectedTx.rewardEarned || 25} Points</span>
+                  <span className="font-bold text-emerald-700">+{selectedTx.rewardEarned || 25} Points</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Status</span>
-                  <span className="text-emerald-700 font-semibold">{selectedTx.status || "Completed"}</span>
+                  <span className="text-emerald-700 font-bold">{selectedTx.status || "Completed"}</span>
                 </div>
               </div>
 
               <button
                 onClick={() => setSelectedTx(null)}
-                className="w-full py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl mt-2"
+                className="w-full py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl mt-2 transition"
               >
                 Close Receipt
               </button>
@@ -557,7 +570,7 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
             </div>
             <button
               onClick={onRepayClick}
-              className="px-4 py-1.5 text-xs font-semibold text-blue-600 border border-blue-600 rounded-full hover:bg-blue-50 transition"
+              className="px-4 py-1.5 text-xs font-semibold text-[#F47920] border border-[#F47920] rounded-full hover:bg-orange-50 transition"
             >
               Pay bill
             </button>
@@ -571,7 +584,7 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
           onClick={() => navigate("/scan")}
           className="flex flex-col items-center gap-2 group"
         >
-          <div className="w-13 h-13 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition">
+          <div className="w-13 h-13 rounded-full bg-orange-50 text-[#F47920] flex items-center justify-center group-hover:bg-orange-100 transition">
             <Scan size={22} />
           </div>
           <span className="text-xs font-medium text-gray-800">Scan QR</span>
@@ -609,9 +622,9 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
       </div>
 
       {/* Clean Store Offer Banner */}
-      <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50 flex items-center justify-between">
+      <div className="p-4 rounded-xl border border-orange-100 bg-orange-50/50 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-[#F47920] text-white flex items-center justify-center">
             <Tag size={18} />
           </div>
           <div>
@@ -621,7 +634,7 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
         </div>
         <button
           onClick={() => navigate("/scan")}
-          className="px-3 py-1.5 text-xs font-semibold bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50"
+          className="px-3 py-1.5 text-xs font-semibold bg-white border border-orange-200 text-[#F47920] rounded-lg hover:bg-orange-50"
         >
           Scan
         </button>
@@ -639,7 +652,7 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
               onClick={() => navigate("/scan")}
               className="flex flex-col items-center gap-1.5 min-w-[64px]"
             >
-              <div className="w-13 h-13 rounded-full bg-gray-100 text-gray-800 flex items-center justify-center font-semibold text-sm hover:ring-2 hover:ring-blue-500 transition">
+              <div className="w-13 h-13 rounded-full bg-gray-100 text-gray-800 flex items-center justify-center font-semibold text-sm hover:ring-2 hover:ring-[#F47920] transition">
                 {p.initials}
               </div>
               <span className="text-xs text-gray-700 font-medium truncate max-w-[68px]">
@@ -658,7 +671,7 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
           </span>
           <button
             onClick={() => navigate("/history")}
-            className="text-xs font-semibold text-blue-600 hover:underline"
+            className="text-xs font-semibold text-[#F47920] hover:underline"
           >
             See all
           </button>
@@ -740,7 +753,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
               onClick={() => handleSelectStore(s)}
               className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition ${
                 merchant === s.name
-                  ? "border-blue-600 bg-blue-50/50"
+                  ? "border-[#F47920] bg-orange-50/50"
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
@@ -757,7 +770,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
       {/* Amount input & presets */}
       <div>
         <label className="text-xs font-semibold text-gray-500 block mb-1">Enter Amount</label>
-        <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2.5 focus-within:border-blue-600">
+        <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2.5 focus-within:border-[#F47920]">
           <span className="text-xl font-bold text-gray-500 mr-2">₹</span>
           <input
             type="number"
@@ -776,7 +789,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
               onClick={() => setAmount(preset)}
               className={`flex-1 py-1 text-xs font-semibold rounded-lg border transition ${
                 amount === preset
-                  ? "bg-blue-600 text-white border-blue-600"
+                  ? "bg-[#F47920] text-white border-[#F47920]"
                   : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
               }`}
             >
@@ -789,7 +802,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
       <button
         onClick={() => navigate("/pay")}
         disabled={!amount || amount <= 0}
-        className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition disabled:opacity-50"
+        className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-semibold rounded-xl transition disabled:opacity-50"
       >
         Proceed to Pay {formatRupee(amount)}
       </button>
@@ -823,7 +836,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
             onClick={() => setMethod("later")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
               method === "later"
-                ? "border-blue-600 bg-blue-50/40 ring-1 ring-blue-600"
+                ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920]"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
@@ -833,12 +846,12 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
                 name="payopt"
                 checked={method === "later"}
                 onChange={() => setMethod("later")}
-                className="mt-1"
+                className="mt-1 accent-[#F47920]"
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-900">Buy Now, Pay Later</span>
-                  <span className="text-xs font-semibold text-blue-700">30-day 0% interest</span>
+                  <span className="text-xs font-semibold text-[#F47920]">30-day 0% interest</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
                   Available credit: {formatRupee(credit)} • +25 Reward Points
@@ -852,7 +865,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
             onClick={() => setMethod("hdfc")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
               method === "hdfc"
-                ? "border-blue-600 bg-blue-50/40 ring-1 ring-blue-600"
+                ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920]"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
@@ -862,7 +875,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
                 name="payopt"
                 checked={method === "hdfc"}
                 onChange={() => setMethod("hdfc")}
-                className="mt-1"
+                className="mt-1 accent-[#F47920]"
               />
               <div>
                 <div className="text-sm font-bold text-gray-900">HDFC Bank •••• 4812</div>
@@ -876,7 +889,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
             onClick={() => setMethod("sbi")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
               method === "sbi"
-                ? "border-blue-600 bg-blue-50/40 ring-1 ring-blue-600"
+                ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920]"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
@@ -886,7 +899,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
                 name="payopt"
                 checked={method === "sbi"}
                 onChange={() => setMethod("sbi")}
-                className="mt-1"
+                className="mt-1 accent-[#F47920]"
               />
               <div>
                 <div className="text-sm font-bold text-gray-900">SBI •••• 8912</div>
@@ -900,7 +913,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
       <button
         onClick={onPay}
         disabled={method === "later" && !isEligible}
-        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50"
+        className="w-full py-4 bg-[#F47920] hover:bg-[#E06710] text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50"
       >
         {method === "later"
           ? `Pay ${formatRupee(amount)} using Buy Now, Pay Later`
@@ -959,13 +972,13 @@ function SuccessView({ amount, merchant, vpa, method, navigate }) {
       <div className="space-y-2">
         <button
           onClick={() => navigate("/")}
-          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition"
+          className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-semibold rounded-xl transition"
         >
           Done
         </button>
         <button
           onClick={() => navigate("/rewards")}
-          className="w-full py-2.5 text-xs font-semibold text-blue-600 hover:underline"
+          className="w-full py-2.5 text-xs font-semibold text-[#F47920] hover:underline"
         >
           View My Reward Points →
         </button>
@@ -1033,7 +1046,7 @@ function RewardsView({ points, setPoints }) {
                     v.claimed
                       ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default"
                       : points >= v.req
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      ? "bg-[#F47920] text-white hover:bg-[#E06710]"
                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                   }`}
                 >
@@ -1046,7 +1059,7 @@ function RewardsView({ points, setPoints }) {
                   <span className="font-mono font-bold text-gray-800">Coupon: {v.code}</span>
                   <button
                     onClick={() => copyCode(v.code)}
-                    className="text-blue-600 font-semibold hover:underline"
+                    className="text-[#F47920] font-semibold hover:underline"
                   >
                     {copiedCode === v.code ? "Copied" : "Copy Code"}
                   </button>
@@ -1068,7 +1081,7 @@ function ProfileView({ credit, creditLimit, points, onRepayClick }) {
     <div className="space-y-6">
       {/* User Header */}
       <div className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs text-center">
-        <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs">
+        <div className="w-16 h-16 rounded-full bg-[#002855] text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs">
           R
         </div>
         <h2 className="text-base font-bold text-gray-900 mt-3">Rahul Sharma</h2>
@@ -1092,7 +1105,7 @@ function ProfileView({ credit, creditLimit, points, onRepayClick }) {
                 <div className="text-[11px] text-gray-500">Savings A/c • Primary UPI</div>
               </div>
             </div>
-            <span className="text-[11px] font-semibold text-blue-600">Default</span>
+            <span className="text-[11px] font-semibold text-[#F47920]">Default</span>
           </div>
 
           <div className="p-3.5 flex items-center justify-between">
@@ -1129,7 +1142,7 @@ function ProfileView({ credit, creditLimit, points, onRepayClick }) {
         {creditLimit - credit > 0 && (
           <button
             onClick={onRepayClick}
-            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#F47920] rounded-lg hover:bg-[#E06710]"
           >
             Pay Dues
           </button>
@@ -1190,7 +1203,7 @@ function HistoryView({ transactions, onSelectTx }) {
         placeholder="Search merchant or UTR..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full px-3.5 py-2 text-xs border border-gray-200 rounded-xl outline-none focus:border-blue-600"
+        className="w-full px-3.5 py-2 text-xs border border-gray-200 rounded-xl outline-none focus:border-[#F47920]"
       />
 
       {/* Filter Tabs */}
@@ -1251,10 +1264,15 @@ function HistoryView({ transactions, onSelectTx }) {
 // ----------------------------------------------------
 // ROOT MOUNT
 // ----------------------------------------------------
-createRoot(document.getElementById("root")).render(
+const container = document.getElementById("root");
+if (!window.__upi_root) {
+  window.__upi_root = createRoot(container);
+}
+window.__upi_root.render(
   <ErrorBoundary>
     <HashRouter>
       <App />
     </HashRouter>
   </ErrorBoundary>
 );
+
