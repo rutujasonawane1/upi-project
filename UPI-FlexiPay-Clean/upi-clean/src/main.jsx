@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Component } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -13,14 +13,84 @@ import {
   History,
   Copy,
   Search,
-  ArrowUpRight
+  ArrowUpRight,
+  AlertCircle
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import "./index.css";
 
+// Error Boundary to prevent any blank screen
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
+  handleReset = () => {
+    localStorage.clear();
+    window.location.reload();
+  };
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-center">
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 max-w-sm shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <AlertCircle size={24} />
+            </div>
+            <h2 className="text-base font-bold text-gray-900">Something went wrong</h2>
+            <p className="text-xs text-gray-500">
+              Corrupted local data detected. Click below to clear cache and reload.
+            </p>
+            <button
+              onClick={this.handleReset}
+              className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition"
+            >
+              Reset App Data & Reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ----------------------------------------------------
-// CLEAN REALISTIC TRANSACTION DATA (Google Pay style)
+// TRANSACTION NORMALIZER (Protects against stale localStorage schema)
 // ----------------------------------------------------
+function normalizeTx(tx) {
+  if (!tx || typeof tx !== "object") return null;
+  const merchant = tx.merchant || "Merchant";
+  const mode = tx.mode || tx.type || "FlexiPay Pay Later";
+  const initials =
+    tx.initials ||
+    merchant
+      .split(" ")
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() ||
+    "TX";
+
+  return {
+    id: tx.id || "tx_" + Math.random(),
+    merchant,
+    upiId: tx.upiId || tx.vpa || "store@upi",
+    initials,
+    amount: Number(tx.amount) || 0,
+    date: tx.date || tx.time || "Recently",
+    mode,
+    utr: String(tx.utr || "429108420192"),
+    status: tx.status || "Completed"
+  };
+}
+
 const INITIAL_TRANSACTIONS = [
   {
     id: "tx_101",
@@ -77,10 +147,10 @@ const INITIAL_TRANSACTIONS = [
     utr: "428201948210",
     status: "Completed"
   }
-];
+].map(normalizeTx);
 
 function formatRupee(n) {
-  return "₹" + Number(n).toLocaleString("en-IN");
+  return "₹" + Number(n || 0).toLocaleString("en-IN");
 }
 
 function App() {
@@ -92,10 +162,25 @@ function App() {
   }, [location.pathname]);
 
   const [creditLimit] = useState(25000);
-  const [credit, setCredit] = useState(() => Number(localStorage.getItem("flexiCredit") || 22500));
+  const [credit, setCredit] = useState(() => {
+    const saved = localStorage.getItem("flexiCredit");
+    const num = Number(saved);
+    return isNaN(num) || num <= 0 ? 22500 : num;
+  });
+
   const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem("flexiTx");
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+    try {
+      const saved = localStorage.getItem("flexiTx");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(normalizeTx).filter(Boolean);
+        }
+      }
+    } catch (e) {
+      console.warn("Resetting corrupted flexiTx cache:", e);
+    }
+    return INITIAL_TRANSACTIONS;
   });
 
   // Active Scan / Payment state
@@ -108,23 +193,34 @@ function App() {
 
   // Persistence
   useEffect(() => {
-    localStorage.setItem("flexiCredit", credit);
-    localStorage.setItem("flexiTx", JSON.stringify(transactions));
+    try {
+      localStorage.setItem("flexiCredit", String(credit));
+      localStorage.setItem("flexiTx", JSON.stringify(transactions));
+    } catch (e) {
+      console.error("Storage save failed:", e);
+    }
   }, [credit, transactions]);
 
   // Execute payment
   const handlePay = () => {
-    const newTx = {
+    const rawTx = {
       id: "tx_" + Date.now(),
-      merchant: merchant,
-      upiId: vpa,
-      initials: merchant.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
+      merchant: merchant || "Merchant",
+      upiId: vpa || "store@upi",
+      initials: (merchant || "ST")
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase(),
       amount: amount,
       date: "Just now",
       mode: method === "later" ? "FlexiPay Pay Later" : "HDFC Bank •••• 4812",
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
       status: "Completed"
     };
+
+    const newTx = normalizeTx(rawTx);
 
     if (method === "later") {
       setCredit((c) => Math.max(0, c - amount));
@@ -139,20 +235,18 @@ function App() {
     const due = creditLimit - credit;
     if (due <= 0) return;
     setCredit(creditLimit);
-    setTransactions((prev) => [
-      {
-        id: "tx_" + Date.now(),
-        merchant: "FlexiPay Repayment",
-        upiId: "repay@flexipay",
-        initials: "FP",
-        amount: due,
-        date: "Just now",
-        mode: "HDFC Bank •••• 4812",
-        utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
-        status: "Completed"
-      },
-      ...prev
-    ]);
+    const newTx = normalizeTx({
+      id: "tx_" + Date.now(),
+      merchant: "FlexiPay Repayment",
+      upiId: "repay@flexipay",
+      initials: "FP",
+      amount: due,
+      date: "Just now",
+      mode: "HDFC Bank •••• 4812",
+      utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
+      status: "Completed"
+    });
+    setTransactions((prev) => [newTx, ...prev]);
     setRepayModal(false);
   };
 
@@ -327,7 +421,7 @@ function App() {
             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-tab-enter">
               <div className="text-center pb-4 border-b border-gray-100">
                 <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-base font-bold">
-                  {selectedTx.initials}
+                  {selectedTx.initials || "TX"}
                 </div>
                 <div className="text-xl font-bold text-gray-900 mt-2">
                   {formatRupee(selectedTx.amount)}
@@ -339,15 +433,15 @@ function App() {
               <div className="py-4 space-y-2.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Paid Using</span>
-                  <span className="font-medium text-gray-900">{selectedTx.mode}</span>
+                  <span className="font-medium text-gray-900">{selectedTx.mode || "FlexiPay"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">UPI Transaction ID</span>
-                  <span className="font-mono text-gray-800">{selectedTx.utr}</span>
+                  <span className="font-mono text-gray-800">{selectedTx.utr || "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Status</span>
-                  <span className="text-emerald-700 font-semibold">{selectedTx.status}</span>
+                  <span className="text-emerald-700 font-semibold">{selectedTx.status || "Completed"}</span>
                 </div>
               </div>
 
@@ -382,7 +476,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
   return (
     <div className="space-y-6">
       
-      {/* Clean Primary Credit Card (Flat, zero gradients, confident typography) */}
+      {/* Clean Primary Credit Card */}
       <div className="rounded-2xl border border-gray-200 p-5 bg-white shadow-xs">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -416,7 +510,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
         )}
       </div>
 
-      {/* Clean 4 Action Grid (Google Pay minimal circles) */}
+      {/* Clean 4 Action Grid */}
       <div className="grid grid-cols-4 gap-2 text-center pt-1">
         <button
           onClick={() => navigate("/scan")}
@@ -459,7 +553,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
         </button>
       </div>
 
-      {/* Recent Merchants (Google Pay style circular contact row) */}
+      {/* Recent Merchants */}
       <div>
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
           Frequent Merchants
@@ -482,7 +576,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
         </div>
       </div>
 
-      {/* Clean Transaction List (Google Pay simple rows) */}
+      {/* Clean Transaction List */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -497,7 +591,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
         </div>
 
         <div className="divide-y divide-gray-100">
-          {transactions.slice(0, 4).map((tx) => (
+          {(transactions || []).slice(0, 4).map((tx) => (
             <div
               key={tx.id}
               onClick={() => onSelectTx(tx)}
@@ -505,7 +599,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">
-                  {tx.initials}
+                  {tx.initials || "TX"}
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-900 leading-tight">
@@ -520,7 +614,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
                   -{formatRupee(tx.amount)}
                 </div>
                 <div className="text-[11px] text-gray-500 mt-0.5">
-                  {tx.mode.includes("Later") ? "Pay Later" : "Bank UPI"}
+                  {(tx.mode || "").includes("Later") ? "Pay Later" : "Bank UPI"}
                 </div>
               </div>
             </div>
@@ -532,7 +626,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
 }
 
 // ----------------------------------------------------
-// SCAN VIEW (Clean & Direct)
+// SCAN VIEW
 // ----------------------------------------------------
 function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }) {
   const stores = [
@@ -613,7 +707,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
 }
 
 // ----------------------------------------------------
-// PAYMENT VIEW (Clean Google Pay Bottom Sheet)
+// PAYMENT VIEW
 // ----------------------------------------------------
 function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }) {
   const isEligible = credit >= amount;
@@ -633,7 +727,6 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
         </div>
 
         <div className="space-y-2.5">
-          {/* FlexiPay Option */}
           <label
             onClick={() => setMethod("later")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
@@ -662,7 +755,6 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
             </div>
           </label>
 
-          {/* Bank Option */}
           <label
             onClick={() => setMethod("bank")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
@@ -702,7 +794,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
 }
 
 // ----------------------------------------------------
-// SUCCESS VIEW (Clean Google Pay Checkmark)
+// SUCCESS VIEW
 // ----------------------------------------------------
 function SuccessView({ amount, merchant, vpa, method, navigate }) {
   const utr = String(Math.floor(400000000000 + Math.random() * 900000000000));
@@ -775,7 +867,7 @@ function HistoryView({ transactions, onSelectTx }) {
       </div>
 
       <div className="divide-y divide-gray-100">
-        {transactions.map((tx) => (
+        {(transactions || []).map((tx) => (
           <div
             key={tx.id}
             onClick={() => onSelectTx(tx)}
@@ -783,7 +875,7 @@ function HistoryView({ transactions, onSelectTx }) {
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">
-                {tx.initials}
+                {tx.initials || "TX"}
               </div>
               <div>
                 <div className="text-sm font-semibold text-gray-900 leading-tight">
@@ -798,7 +890,7 @@ function HistoryView({ transactions, onSelectTx }) {
                 -{formatRupee(tx.amount)}
               </div>
               <div className="text-[11px] text-gray-500 mt-0.5">
-                {tx.mode.includes("Later") ? "Pay Later" : "Bank UPI"}
+                {(tx.mode || "").includes("Later") ? "Pay Later" : "Bank UPI"}
               </div>
             </div>
           </div>
@@ -809,10 +901,12 @@ function HistoryView({ transactions, onSelectTx }) {
 }
 
 // ----------------------------------------------------
-// ROOT MOUNT
+// ROOT MOUNT WITH ERROR BOUNDARY
 // ----------------------------------------------------
 createRoot(document.getElementById("root")).render(
-  <HashRouter>
-    <App />
-  </HashRouter>
+  <ErrorBoundary>
+    <HashRouter>
+      <App />
+    </HashRouter>
+  </ErrorBoundary>
 );
