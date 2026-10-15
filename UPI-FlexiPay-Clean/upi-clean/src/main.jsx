@@ -14,19 +14,28 @@ import {
   Copy,
   Search,
   ArrowUpRight,
-  AlertCircle
+  Gift,
+  Sparkles,
+  ShieldCheck,
+  CreditCard,
+  Tag,
+  AlertCircle,
+  Share2,
+  ExternalLink
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import "./index.css";
 
-// Error Boundary to prevent any blank screen
+// ----------------------------------------------------
+// ERROR BOUNDARY (Zero Blank Screen Guarantee)
+// ----------------------------------------------------
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return { hasError: true };
   }
   componentDidCatch(error, errorInfo) {
     console.error("ErrorBoundary caught:", error, errorInfo);
@@ -38,20 +47,20 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-center">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-center font-sans">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 max-w-sm shadow-sm space-y-3">
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <AlertCircle size={24} />
             </div>
-            <h2 className="text-base font-bold text-gray-900">Something went wrong</h2>
+            <h2 className="text-base font-bold text-gray-900">App Encountered an Issue</h2>
             <p className="text-xs text-gray-500">
-              Corrupted local data detected. Click below to clear cache and reload.
+              Clear local cached state and reload to resume.
             </p>
             <button
               onClick={this.handleReset}
               className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition"
             >
-              Reset App Data & Reload
+              Reset Data & Reload
             </button>
           </div>
         </div>
@@ -62,7 +71,7 @@ class ErrorBoundary extends Component {
 }
 
 // ----------------------------------------------------
-// TRANSACTION NORMALIZER (Protects against stale localStorage schema)
+// TRANSACTION NORMALIZER (Protects against schema mismatches)
 // ----------------------------------------------------
 function normalizeTx(tx) {
   if (!tx || typeof tx !== "object") return null;
@@ -87,7 +96,8 @@ function normalizeTx(tx) {
     date: tx.date || tx.time || "Recently",
     mode,
     utr: String(tx.utr || "429108420192"),
-    status: tx.status || "Completed"
+    status: tx.status || "Completed",
+    rewardEarned: Number(tx.rewardEarned) || (mode.includes("Later") ? 25 : 5)
   };
 }
 
@@ -101,7 +111,8 @@ const INITIAL_TRANSACTIONS = [
     date: "Today, 7:32 PM",
     mode: "FlexiPay Pay Later",
     utr: "429108420192",
-    status: "Completed"
+    status: "Completed",
+    rewardEarned: 25
   },
   {
     id: "tx_102",
@@ -112,7 +123,8 @@ const INITIAL_TRANSACTIONS = [
     date: "Today, 3:15 PM",
     mode: "FlexiPay Pay Later",
     utr: "429108119284",
-    status: "Completed"
+    status: "Completed",
+    rewardEarned: 10
   },
   {
     id: "tx_103",
@@ -123,7 +135,8 @@ const INITIAL_TRANSACTIONS = [
     date: "Yesterday, 8:45 PM",
     mode: "HDFC Bank •••• 4812",
     utr: "429091824712",
-    status: "Completed"
+    status: "Completed",
+    rewardEarned: 5
   },
   {
     id: "tx_104",
@@ -134,7 +147,8 @@ const INITIAL_TRANSACTIONS = [
     date: "13 Oct 2026",
     mode: "FlexiPay Pay Later",
     utr: "428910492819",
-    status: "Completed"
+    status: "Completed",
+    rewardEarned: 8
   },
   {
     id: "tx_105",
@@ -145,7 +159,8 @@ const INITIAL_TRANSACTIONS = [
     date: "08 Oct 2026",
     mode: "FlexiPay Pay Later",
     utr: "428201948210",
-    status: "Completed"
+    status: "Completed",
+    rewardEarned: 50
   }
 ].map(normalizeTx);
 
@@ -168,6 +183,12 @@ function App() {
     return isNaN(num) || num <= 0 ? 22500 : num;
   });
 
+  const [points, setPoints] = useState(() => {
+    const saved = localStorage.getItem("flexiPoints");
+    const num = Number(saved);
+    return isNaN(num) ? 2450 : num;
+  });
+
   const [transactions, setTransactions] = useState(() => {
     try {
       const saved = localStorage.getItem("flexiTx");
@@ -178,12 +199,12 @@ function App() {
         }
       }
     } catch (e) {
-      console.warn("Resetting corrupted flexiTx cache:", e);
+      console.warn("Resetting flexiTx cache:", e);
     }
     return INITIAL_TRANSACTIONS;
   });
 
-  // Active Scan / Payment state
+  // Active Flow State
   const [amount, setAmount] = useState(2500);
   const [merchant, setMerchant] = useState("Sharma Super Store");
   const [vpa, setVpa] = useState("sharma@flexipay");
@@ -195,11 +216,12 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem("flexiCredit", String(credit));
+      localStorage.setItem("flexiPoints", String(points));
       localStorage.setItem("flexiTx", JSON.stringify(transactions));
     } catch (e) {
       console.error("Storage save failed:", e);
     }
-  }, [credit, transactions]);
+  }, [credit, points, transactions]);
 
   // Execute payment
   const handlePay = () => {
@@ -217,13 +239,17 @@ function App() {
       date: "Just now",
       mode: method === "later" ? "FlexiPay Pay Later" : "HDFC Bank •••• 4812",
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
-      status: "Completed"
+      status: "Completed",
+      rewardEarned: method === "later" ? 25 : 5
     };
 
     const newTx = normalizeTx(rawTx);
 
     if (method === "later") {
       setCredit((c) => Math.max(0, c - amount));
+      setPoints((p) => p + 25);
+    } else {
+      setPoints((p) => p + 5);
     }
 
     setTransactions((prev) => [newTx, ...prev]);
@@ -235,20 +261,31 @@ function App() {
     const due = creditLimit - credit;
     if (due <= 0) return;
     setCredit(creditLimit);
+    setPoints((p) => p + 50);
+
     const newTx = normalizeTx({
       id: "tx_" + Date.now(),
-      merchant: "FlexiPay Repayment",
+      merchant: "FlexiPay Bill Settlement",
       upiId: "repay@flexipay",
       initials: "FP",
       amount: due,
       date: "Just now",
       mode: "HDFC Bank •••• 4812",
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
-      status: "Completed"
+      status: "Completed",
+      rewardEarned: 50
     });
+
     setTransactions((prev) => [newTx, ...prev]);
     setRepayModal(false);
   };
+
+  const navItems = [
+    { path: "/", label: "Home", icon: Building2 },
+    { path: "/history", label: "Activity", icon: History },
+    { path: "/rewards", label: "Rewards", icon: Gift },
+    { path: "/profile", label: "Profile", icon: User }
+  ];
 
   return (
     <div className="min-h-screen bg-white sm:bg-gray-100 flex justify-center font-sans">
@@ -274,7 +311,21 @@ function App() {
               className="p-1 -ml-1 text-gray-700 hover:text-black flex items-center gap-2"
             >
               <ArrowLeft size={20} />
-              <span className="text-sm font-medium">Back</span>
+              <span className="text-sm font-medium">
+                {location.pathname === "/scan"
+                  ? "Scan QR"
+                  : location.pathname === "/pay"
+                  ? "Confirm Payment"
+                  : location.pathname === "/success"
+                  ? "Receipt"
+                  : location.pathname === "/rewards"
+                  ? "Rewards"
+                  : location.pathname === "/profile"
+                  ? "Profile"
+                  : location.pathname === "/qr"
+                  ? "My QR"
+                  : "Activity"}
+              </span>
             </button>
           )}
 
@@ -296,6 +347,7 @@ function App() {
               credit={credit}
               creditLimit={creditLimit}
               transactions={transactions}
+              points={points}
               navigate={navigate}
               onSelectTx={(tx) => setSelectedTx(tx)}
               onRepayClick={() => setRepayModal(true)}
@@ -337,49 +389,44 @@ function App() {
 
           {location.pathname === "/qr" && <MyQrView />}
 
+          {location.pathname === "/rewards" && (
+            <RewardsView points={points} setPoints={setPoints} />
+          )}
+
           {location.pathname === "/history" && (
             <HistoryView
               transactions={transactions}
               onSelectTx={(tx) => setSelectedTx(tx)}
             />
           )}
+
+          {location.pathname === "/profile" && (
+            <ProfileView
+              credit={credit}
+              creditLimit={creditLimit}
+              points={points}
+              onRepayClick={() => setRepayModal(true)}
+            />
+          )}
         </main>
 
-        {/* Bottom Minimal Navigation */}
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-3 px-4 z-20">
-          <button
-            onClick={() => navigate("/")}
-            className={`flex flex-col items-center gap-1 text-xs ${
-              location.pathname === "/" ? "text-blue-600 font-semibold" : "text-gray-500"
-            }`}
-          >
-            <div className={`p-1 rounded-full ${location.pathname === "/" ? "bg-blue-50" : ""}`}>
-              <Building2 size={20} />
-            </div>
-            <span>Home</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/scan")}
-            className="flex flex-col items-center gap-1 text-xs text-gray-700"
-          >
-            <div className="w-11 h-11 -mt-5 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md hover:bg-blue-700 active:scale-95 transition">
-              <Scan size={20} />
-            </div>
-            <span className="font-medium text-gray-900">Scan</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/history")}
-            className={`flex flex-col items-center gap-1 text-xs ${
-              location.pathname === "/history" ? "text-blue-600 font-semibold" : "text-gray-500"
-            }`}
-          >
-            <div className={`p-1 rounded-full ${location.pathname === "/history" ? "bg-blue-50" : ""}`}>
-              <History size={20} />
-            </div>
-            <span>Activity</span>
-          </button>
+        {/* Bottom 4-Item Minimal Navigation */}
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-2.5 px-3 z-20">
+          {navItems.map(({ path, label, icon: Icon }) => {
+            const active = location.pathname === path;
+            return (
+              <button
+                key={path}
+                onClick={() => navigate(path)}
+                className={`flex flex-col items-center gap-1 text-xs py-1 px-3 rounded-xl transition ${
+                  active ? "text-blue-600 font-semibold" : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                <Icon size={20} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </nav>
 
         {/* Minimal Repay Modal */}
@@ -387,7 +434,7 @@ function App() {
           <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-tab-enter">
               <h3 className="text-base font-semibold text-gray-900">Pay FlexiPay Bill</h3>
-              <p className="text-xs text-gray-500 mt-1">Due by 5 Nov • 0% Interest</p>
+              <p className="text-xs text-gray-500 mt-0.5">Due on 5 Nov • 0% Interest</p>
 
               <div className="my-5 p-4 rounded-xl bg-gray-50 border border-gray-100">
                 <div className="text-xs text-gray-500">Amount Due</div>
@@ -423,7 +470,7 @@ function App() {
                 <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-base font-bold">
                   {selectedTx.initials || "TX"}
                 </div>
-                <div className="text-xl font-bold text-gray-900 mt-2">
+                <div className="text-2xl font-bold text-gray-900 mt-2">
                   {formatRupee(selectedTx.amount)}
                 </div>
                 <div className="text-sm font-semibold text-gray-900 mt-0.5">{selectedTx.merchant}</div>
@@ -436,8 +483,12 @@ function App() {
                   <span className="font-medium text-gray-900">{selectedTx.mode || "FlexiPay"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">UPI Transaction ID</span>
+                  <span className="text-gray-500">UPI Ref (UTR)</span>
                   <span className="font-mono text-gray-800">{selectedTx.utr || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Rewards Earned</span>
+                  <span className="font-semibold text-emerald-700">+{selectedTx.rewardEarned || 25} Points</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Status</span>
@@ -449,7 +500,7 @@ function App() {
                 onClick={() => setSelectedTx(null)}
                 className="w-full py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl mt-2"
               >
-                Close
+                Close Receipt
               </button>
             </div>
           </div>
@@ -461,22 +512,22 @@ function App() {
 }
 
 // ----------------------------------------------------
-// GOOGLE PAY STYLE HOME VIEW
+// HOME VIEW
 // ----------------------------------------------------
-function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onRepayClick }) {
+function HomeView({ credit, creditLimit, transactions, points, navigate, onSelectTx, onRepayClick }) {
   const used = creditLimit - credit;
 
   const people = [
-    { name: "Sharma Store", initials: "SS", amount: 2500, vpa: "sharma@flexipay" },
-    { name: "Zepto", initials: "ZG", amount: 650, vpa: "zepto@icici" },
-    { name: "Swiggy", initials: "SW", amount: 380, vpa: "swiggy@axis" },
-    { name: "Apollo", initials: "AP", amount: 520, vpa: "apollo@hdfc" }
+    { name: "Sharma Store", initials: "SS", vpa: "sharma@flexipay" },
+    { name: "Zepto", initials: "ZG", vpa: "zepto@icici" },
+    { name: "Swiggy", initials: "SW", vpa: "swiggy@axis" },
+    { name: "Apollo", initials: "AP", vpa: "apollo@hdfc" }
   ];
 
   return (
     <div className="space-y-6">
       
-      {/* Clean Primary Credit Card */}
+      {/* Primary Credit Card */}
       <div className="rounded-2xl border border-gray-200 p-5 bg-white shadow-xs">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -491,7 +542,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
           <div className="text-3xl font-extrabold text-gray-900 tracking-tight">
             {formatRupee(credit)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Available to spend at any UPI QR</div>
+          <div className="text-xs text-gray-500 mt-1">Available to spend at any store QR</div>
         </div>
 
         {used > 0 && (
@@ -510,7 +561,7 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
         )}
       </div>
 
-      {/* Clean 4 Action Grid */}
+      {/* 4 Action Grid */}
       <div className="grid grid-cols-4 gap-2 text-center pt-1">
         <button
           onClick={() => navigate("/scan")}
@@ -533,6 +584,16 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
         </button>
 
         <button
+          onClick={() => navigate("/rewards")}
+          className="flex flex-col items-center gap-2 group"
+        >
+          <div className="w-13 h-13 rounded-full bg-gray-50 text-gray-700 flex items-center justify-center group-hover:bg-gray-100 transition">
+            <Gift size={22} />
+          </div>
+          <span className="text-xs font-medium text-gray-800">Rewards</span>
+        </button>
+
+        <button
           onClick={() => navigate("/qr")}
           className="flex flex-col items-center gap-2 group"
         >
@@ -541,22 +602,31 @@ function HomeView({ credit, creditLimit, transactions, navigate, onSelectTx, onR
           </div>
           <span className="text-xs font-medium text-gray-800">My QR</span>
         </button>
+      </div>
 
-        <button
-          onClick={() => navigate("/history")}
-          className="flex flex-col items-center gap-2 group"
-        >
-          <div className="w-13 h-13 rounded-full bg-gray-50 text-gray-700 flex items-center justify-center group-hover:bg-gray-100 transition">
-            <History size={22} />
+      {/* Clean Store Offer Banner */}
+      <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center">
+            <Tag size={18} />
           </div>
-          <span className="text-xs font-medium text-gray-800">History</span>
+          <div>
+            <div className="text-xs font-bold text-gray-900">Sharma Super Store Offer</div>
+            <div className="text-[11px] text-gray-600">Flat 10% Cashback on Pay Later</div>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate("/scan")}
+          className="px-3 py-1.5 text-xs font-semibold bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50"
+        >
+          Scan
         </button>
       </div>
 
       {/* Recent Merchants */}
       <div>
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-          Frequent Merchants
+          Frequent Stores
         </div>
         <div className="flex gap-4 overflow-x-auto pb-1 no-scrollbar">
           {people.map((p, i) => (
@@ -657,7 +727,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
       {/* Select Demo Store */}
       <div>
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          Or Tap Nearby Store (Demo)
+          Or Select Nearby Store (Demo)
         </div>
         <div className="space-y-2">
           {stores.map((s, i) => (
@@ -680,7 +750,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
         </div>
       </div>
 
-      {/* Amount input */}
+      {/* Amount input & presets */}
       <div>
         <label className="text-xs font-semibold text-gray-500 block mb-1">Enter Amount</label>
         <div className="flex items-center border border-gray-300 rounded-xl px-4 py-2.5 focus-within:border-blue-600">
@@ -692,6 +762,23 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
             className="w-full text-2xl font-bold text-gray-900 outline-none"
             placeholder="0"
           />
+        </div>
+
+        {/* Quick Amount Presets */}
+        <div className="flex gap-2 mt-2">
+          {[250, 500, 1000, 2500].map((preset) => (
+            <button
+              key={preset}
+              onClick={() => setAmount(preset)}
+              className={`flex-1 py-1 text-xs font-semibold rounded-lg border transition ${
+                amount === preset
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              ₹{preset}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -749,7 +836,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
                   <span className="text-xs font-semibold text-blue-700">30-day 0% interest</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
-                  Available credit: {formatRupee(credit)}
+                  Available credit: {formatRupee(credit)} • +25 Reward Points
                 </div>
               </div>
             </div>
@@ -773,7 +860,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
               />
               <div>
                 <div className="text-sm font-bold text-gray-900">HDFC Bank •••• 4812</div>
-                <div className="text-xs text-gray-500 mt-0.5">Instant UPI debit</div>
+                <div className="text-xs text-gray-500 mt-0.5">Instant UPI debit via PIN</div>
               </div>
             </div>
           </label>
@@ -825,14 +912,193 @@ function SuccessView({ amount, merchant, vpa, method, navigate }) {
             <span className="font-semibold text-gray-900">5 Nov 2026</span>
           </div>
         )}
+        <div className="flex justify-between border-t border-gray-200/60 pt-2">
+          <span className="text-gray-500">Rewards Earned</span>
+          <span className="font-bold text-emerald-700">
+            {method === "later" ? "+25 Points" : "+5 Points"}
+          </span>
+        </div>
       </div>
 
-      <button
-        onClick={() => navigate("/")}
-        className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition"
-      >
-        Done
-      </button>
+      <div className="space-y-2">
+        <button
+          onClick={() => navigate("/")}
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition"
+        >
+          Done
+        </button>
+        <button
+          onClick={() => navigate("/rewards")}
+          className="w-full py-2.5 text-xs font-semibold text-blue-600 hover:underline"
+        >
+          View My Reward Points →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// REWARDS VIEW (Google Pay Voucher Style)
+// ----------------------------------------------------
+function RewardsView({ points, setPoints }) {
+  const [vouchers, setVouchers] = useState([
+    { id: 1, title: "₹50 Instant Cashback", req: 500, code: "FLEXI50", claimed: false },
+    { id: 2, title: "₹100 Sharma Store Discount", req: 900, code: "SHARMA100", claimed: false },
+    { id: 3, title: "₹200 Zepto Grocery Voucher", req: 1800, code: "ZEPTO200", claimed: false }
+  ]);
+  const [copiedCode, setCopiedCode] = useState("");
+
+  const handleClaim = (v) => {
+    if (points < v.req || v.claimed) return;
+    setPoints((p) => p - v.req);
+    setVouchers((prev) =>
+      prev.map((item) => (item.id === v.id ? { ...item, claimed: true } : item))
+    );
+  };
+
+  const copyCode = (code) => {
+    navigator.clipboard?.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(""), 2000);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Points Card */}
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Total Reward Points
+        </div>
+        <div className="text-3xl font-extrabold text-gray-900 mt-1">
+          {points.toLocaleString("en-IN")}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">Earn points on every UPI & Pay Later transaction</p>
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          Redeemable Vouchers
+        </div>
+
+        <div className="space-y-3">
+          {vouchers.map((v) => (
+            <div key={v.id} className="p-4 rounded-xl border border-gray-200 bg-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">{v.title}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{v.req} Points required</div>
+                </div>
+
+                <button
+                  disabled={points < v.req || v.claimed}
+                  onClick={() => handleClaim(v)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    v.claimed
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default"
+                      : points >= v.req
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  {v.claimed ? "Unlocked" : "Redeem"}
+                </button>
+              </div>
+
+              {v.claimed && (
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                  <span className="font-mono font-bold text-gray-800">Coupon: {v.code}</span>
+                  <button
+                    onClick={() => copyCode(v.code)}
+                    className="text-blue-600 font-semibold hover:underline"
+                  >
+                    {copiedCode === v.code ? "Copied" : "Copy Code"}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// PROFILE & BANK ACCOUNTS VIEW
+// ----------------------------------------------------
+function ProfileView({ credit, creditLimit, points, onRepayClick }) {
+  return (
+    <div className="space-y-6">
+      {/* User Header */}
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs text-center">
+        <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs">
+          R
+        </div>
+        <h2 className="text-base font-bold text-gray-900 mt-3">Rahul Sharma</h2>
+        <div className="text-xs text-gray-500 font-mono">rahul@flexipay • +91 98765 43210</div>
+        <div className="text-xs text-emerald-700 font-semibold mt-2 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+          <ShieldCheck size={14} /> Full KYC Verified
+        </div>
+      </div>
+
+      {/* Linked Bank Accounts */}
+      <div>
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Linked Bank Accounts
+        </div>
+        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
+          <div className="p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 size={20} className="text-gray-600" />
+              <div>
+                <div className="text-xs font-bold text-gray-900">HDFC Bank •••• 4812</div>
+                <div className="text-[11px] text-gray-500">Savings A/c • Primary UPI</div>
+              </div>
+            </div>
+            <span className="text-[11px] font-semibold text-blue-600">Default</span>
+          </div>
+
+          <div className="p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 size={20} className="text-gray-600" />
+              <div>
+                <div className="text-xs font-bold text-gray-900">State Bank of India •••• 8912</div>
+                <div className="text-[11px] text-gray-500">Savings A/c • Secondary</div>
+              </div>
+            </div>
+            <span className="text-[11px] text-gray-400">Linked</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Credit Score & Health */}
+      <div className="p-4 rounded-xl border border-gray-200 bg-white flex items-center justify-between">
+        <div>
+          <div className="text-xs text-gray-500">Experian Credit Score</div>
+          <div className="text-lg font-bold text-gray-900 mt-0.5">785 • Excellent</div>
+          <div className="text-xs text-gray-500">Eligible for ₹10,000 credit limit increase</div>
+        </div>
+        <ChevronRight size={18} className="text-gray-400" />
+      </div>
+
+      {/* Pay Later Statement */}
+      <div className="p-4 rounded-xl border border-gray-200 bg-white flex items-center justify-between">
+        <div>
+          <div className="text-xs text-gray-500">Current FlexiPay Bill</div>
+          <div className="text-base font-bold text-gray-900 mt-0.5">
+            {formatRupee(creditLimit - credit)} Due on 5 Nov
+          </div>
+        </div>
+        {creditLimit - credit > 0 && (
+          <button
+            onClick={onRepayClick}
+            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            Pay Dues
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -844,7 +1110,7 @@ function MyQrView() {
   return (
     <div className="pt-4 text-center space-y-4">
       <h2 className="text-lg font-bold text-gray-900">My UPI QR</h2>
-      <p className="text-xs text-gray-500">Scan to pay Rahul Sharma directly</p>
+      <p className="text-xs text-gray-500">Scan using any UPI app to pay Rahul Sharma directly</p>
 
       <div className="p-6 rounded-2xl border border-gray-200 bg-white inline-block shadow-sm">
         <QRCodeCanvas value="upi://pay?pa=rahul@flexipay&pn=Rahul%20Sharma" size={200} />
@@ -856,9 +1122,25 @@ function MyQrView() {
 }
 
 // ----------------------------------------------------
-// HISTORY VIEW
+// HISTORY VIEW (With Search & Filter Pills)
 // ----------------------------------------------------
 function HistoryView({ transactions, onSelectTx }) {
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const filtered = (transactions || []).filter((tx) => {
+    const matchesFilter =
+      filter === "all"
+        ? true
+        : filter === "later"
+        ? (tx.mode || "").includes("Later")
+        : (tx.mode || "").includes("HDFC");
+    const matchesSearch =
+      (tx.merchant || "").toLowerCase().includes(search.toLowerCase()) ||
+      (tx.utr || "").includes(search);
+    return matchesFilter && matchesSearch;
+  });
+
   return (
     <div className="space-y-4">
       <div>
@@ -866,8 +1148,38 @@ function HistoryView({ transactions, onSelectTx }) {
         <p className="text-xs text-gray-500">All past UPI and FlexiPay orders</p>
       </div>
 
+      {/* Search Input */}
+      <input
+        type="text"
+        placeholder="Search merchant or UTR..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full px-3.5 py-2 text-xs border border-gray-200 rounded-xl outline-none focus:border-blue-600"
+      />
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        {[
+          { id: "all", label: "All" },
+          { id: "later", label: "Pay Later" },
+          { id: "bank", label: "Bank UPI" }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setFilter(tab.id)}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+              filter === tab.id
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="divide-y divide-gray-100">
-        {(transactions || []).map((tx) => (
+        {filtered.map((tx) => (
           <div
             key={tx.id}
             onClick={() => onSelectTx(tx)}
@@ -901,7 +1213,7 @@ function HistoryView({ transactions, onSelectTx }) {
 }
 
 // ----------------------------------------------------
-// ROOT MOUNT WITH ERROR BOUNDARY
+// ROOT MOUNT
 // ----------------------------------------------------
 createRoot(document.getElementById("root")).render(
   <ErrorBoundary>

@@ -10,7 +10,12 @@ import {
   Check,
   Search,
   Building2,
-  Calendar
+  Calendar,
+  Volume2,
+  VolumeX,
+  Tag,
+  ShieldCheck,
+  CheckCircle2
 } from "lucide-react";
 import "./index.css";
 
@@ -25,7 +30,9 @@ const INITIAL_TRANSACTIONS = [
     amount: 2500,
     type: "FlexiPay Pay Later",
     date: "Today, 7:32 PM",
+    items: "Aashirvaad Atta 5kg, Fortune Oil 1L, Tata Salt, Amul Ghee",
     utr: "429108420192",
+    mdr: "₹0.00 (0% Promo)",
     status: "Settled"
   },
   {
@@ -35,7 +42,9 @@ const INITIAL_TRANSACTIONS = [
     amount: 850,
     type: "UPI Direct",
     date: "Today, 4:18 PM",
+    items: "Cadbury Celebrations, Tropicana Juice, Britannia GoodDay",
     utr: "429108119284",
+    mdr: "₹0.00 (Free UPI)",
     status: "Settled"
   },
   {
@@ -45,7 +54,9 @@ const INITIAL_TRANSACTIONS = [
     amount: 1420,
     type: "FlexiPay Pay Later",
     date: "Today, 1:40 PM",
+    items: "Surf Excel 2kg, Dettol Handwash Refill, Vim Bar 3-Pack",
     utr: "429091824712",
+    mdr: "₹0.00 (0% Promo)",
     status: "Settled"
   },
   {
@@ -55,7 +66,9 @@ const INITIAL_TRANSACTIONS = [
     amount: 3200,
     type: "FlexiPay Pay Later",
     date: "Yesterday",
+    items: "Dry Fruits Gift Box, Ferrero Rocher, Organic Honey 500g",
     utr: "428910492819",
+    mdr: "₹0.00 (0% Promo)",
     status: "Settled"
   },
   {
@@ -65,7 +78,9 @@ const INITIAL_TRANSACTIONS = [
     amount: 480,
     type: "UPI Direct",
     date: "Yesterday",
+    items: "Amul Butter 500g, Brown Bread, Epigamia Yogurt",
     utr: "428201948210",
+    mdr: "₹0.00 (Free UPI)",
     status: "Settled"
   }
 ];
@@ -75,16 +90,37 @@ function formatRupee(n) {
 }
 
 function App() {
-  const [tab, setTab] = useState("pos"); // "pos" | "transactions" | "qr"
+  const [tab, setTab] = useState("pos"); // "pos" | "transactions" | "offers" | "qr"
   const [sales, setSales] = useState(18450);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [soundboxEnabled, setSoundboxEnabled] = useState(true);
 
   // POS State
   const [amount, setAmount] = useState("2500");
   const [customer, setCustomer] = useState("Walk-in Customer");
   const [qrGenerated, setQrGenerated] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [selectedTx, setSelectedTx] = useState(null);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+
+  // Custom Store Offer Campaign
+  const [offer, setOffer] = useState({
+    title: "Flat 10% Cashback up to ₹100",
+    minSpend: 1000,
+    rewardPts: 100
+  });
+
+  // Soundbox Voice Announcement
+  const announceSoundbox = (amt) => {
+    if (!soundboxEnabled) return;
+    const text = `FlexiPay par ${amt} rupaye prapt hue.`;
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.lang = "hi-IN";
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   const handleGenerate = () => {
     if (!amount || Number(amount) <= 0) return;
@@ -102,11 +138,14 @@ function App() {
       amount: val,
       type: "FlexiPay Pay Later",
       date: "Just now",
+      items: "Custom Billing Cart",
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
+      mdr: "₹0.00 (0% Promo)",
       status: "Settled"
     };
     setTransactions((prev) => [newTx, ...prev]);
     setPaid(true);
+    announceSoundbox(val);
   };
 
   return (
@@ -124,29 +163,45 @@ function App() {
                 <h1 className="text-base font-bold text-gray-900">Sharma Super Store</h1>
                 <span className="w-2 h-2 rounded-full bg-emerald-500" title="Active"></span>
               </div>
-              <div className="text-xs text-gray-500">UPI ID: sharma@flexipay</div>
+              <div className="text-xs text-gray-500">
+                GSTIN: 27AABCU9603R1ZM • UPI ID: sharma@flexipay
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 hidden sm:inline">Settlement Bank:</span>
-            <span className="text-xs font-semibold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-md">
+          <div className="flex items-center gap-3">
+            {/* Soundbox Toggle Button */}
+            <button
+              onClick={() => setSoundboxEnabled((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition ${
+                soundboxEnabled
+                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+              }`}
+              title="Toggle Audio Soundbox Voice Announcement"
+            >
+              {soundboxEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+              <span className="hidden sm:inline">Soundbox: {soundboxEnabled ? "On" : "Off"}</span>
+            </button>
+
+            <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-1.5 rounded-lg hidden sm:inline">
               HDFC Bank •••• 9921
             </span>
           </div>
         </div>
 
         {/* Minimal Navigation Bar */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-8 border-t border-gray-100 text-sm">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-6 sm:gap-8 border-t border-gray-100 text-sm overflow-x-auto no-scrollbar">
           {[
             { id: "pos", label: "Receive Payment" },
             { id: "transactions", label: "Transactions" },
+            { id: "offers", label: "Customer Offers" },
             { id: "qr", label: "Counter QR" }
           ].map((item) => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
-              className={`py-3 font-medium transition border-b-2 -mb-[1px] ${
+              className={`py-3 font-medium transition border-b-2 -mb-[1px] whitespace-nowrap ${
                 tab === item.id
                   ? "border-blue-600 text-blue-600 font-semibold"
                   : "border-transparent text-gray-500 hover:text-gray-900"
@@ -280,42 +335,18 @@ function App() {
           </div>
         )}
 
-        {/* Tab 2: Clean Transactions Table */}
+        {/* Tab 2: Clean Transactions Table (With Clickable Receipt) */}
         {tab === "transactions" && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-900">Payment History</h2>
-              <span className="text-xs text-gray-500">{transactions.length} orders</span>
-            </div>
-
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-500 border-b border-gray-100 font-semibold">
-                <tr>
-                  <th className="px-5 py-3">Customer</th>
-                  <th className="px-5 py-3">Mode</th>
-                  <th className="px-5 py-3">Amount</th>
-                  <th className="px-5 py-3">Date</th>
-                  <th className="px-5 py-3">UTR Reference</th>
-                  <th className="px-5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-gray-800">
-                {transactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-50/50">
-                    <td className="px-5 py-3 font-medium text-gray-900">{tx.customer}</td>
-                    <td className="px-5 py-3 text-blue-600 font-medium">{tx.type}</td>
-                    <td className="px-5 py-3 font-bold text-gray-900">{formatRupee(tx.amount)}</td>
-                    <td className="px-5 py-3 text-gray-500">{tx.date}</td>
-                    <td className="px-5 py-3 font-mono text-gray-500">{tx.utr}</td>
-                    <td className="px-5 py-3 text-emerald-600 font-semibold">{tx.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TransactionsTab
+            transactions={transactions}
+            onSelectReceipt={(tx) => setSelectedReceipt(tx)}
+          />
         )}
 
-        {/* Tab 3: Simple Counter QR */}
+        {/* Tab 3: Customer Offers Builder */}
+        {tab === "offers" && <OffersTab offer={offer} setOffer={setOffer} />}
+
+        {/* Tab 4: Simple Counter QR */}
         {tab === "qr" && (
           <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-sm mx-auto text-center space-y-4">
             <h2 className="text-base font-bold text-gray-900">Counter Payment Standee</h2>
@@ -343,6 +374,203 @@ function App() {
         )}
 
       </main>
+
+      {/* Tax Invoice Receipt Modal */}
+      {selectedReceipt && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl animate-tab-enter">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">Store Tax Invoice</h3>
+                <p className="text-xs text-gray-500 font-mono">{selectedReceipt.id}</p>
+              </div>
+              <button
+                onClick={() => setSelectedReceipt(null)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="my-4 text-center">
+              <div className="text-3xl font-extrabold text-gray-900">
+                {formatRupee(selectedReceipt.amount)}
+              </div>
+              <p className="text-xs text-emerald-700 font-semibold mt-1">
+                ✓ Settled to HDFC Bank •••• 9921
+              </p>
+            </div>
+
+            <div className="space-y-2 rounded-xl bg-gray-50 p-4 text-xs border border-gray-100">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Customer</span>
+                <span className="font-medium text-gray-900">{selectedReceipt.customer}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Items Purchased</span>
+                <span className="font-medium text-gray-800 text-right max-w-[200px] truncate">
+                  {selectedReceipt.items || "General Store Purchases"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Payment Mode</span>
+                <span className="font-medium text-blue-600">{selectedReceipt.type}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Bank UTR</span>
+                <span className="font-mono text-gray-700">{selectedReceipt.utr}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">MDR Fee</span>
+                <span className="font-semibold text-emerald-700">{selectedReceipt.mdr || "₹0.00"}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-gray-800"
+              >
+                Print Invoice
+              </button>
+              <button
+                onClick={() => setSelectedReceipt(null)}
+                className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// TRANSACTIONS TAB WITH SEARCH
+// ----------------------------------------------------
+function TransactionsTab({ transactions, onSelectReceipt }) {
+  const [search, setSearch] = useState("");
+
+  const filtered = transactions.filter(
+    (t) =>
+      t.customer.toLowerCase().includes(search.toLowerCase()) ||
+      t.type.toLowerCase().includes(search.toLowerCase()) ||
+      t.utr.includes(search)
+  );
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-bold text-gray-900">Payment History</h2>
+          <p className="text-xs text-gray-500">Click any row to view tax invoice receipt</p>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Search customer or UTR..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-3.5 py-2 text-xs border border-gray-200 rounded-lg outline-none focus:border-blue-600 w-full sm:w-64"
+        />
+      </div>
+
+      <table className="w-full text-left text-xs">
+        <thead className="bg-gray-50 text-gray-500 border-b border-gray-100 font-semibold">
+          <tr>
+            <th className="px-5 py-3">Customer</th>
+            <th className="px-5 py-3">Mode</th>
+            <th className="px-5 py-3">Amount</th>
+            <th className="px-5 py-3">Date</th>
+            <th className="px-5 py-3">UTR Reference</th>
+            <th className="px-5 py-3">Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 text-gray-800">
+          {filtered.map((tx) => (
+            <tr
+              key={tx.id}
+              onClick={() => onSelectReceipt(tx)}
+              className="hover:bg-gray-50/70 cursor-pointer transition"
+            >
+              <td className="px-5 py-3 font-medium text-gray-900">{tx.customer}</td>
+              <td className="px-5 py-3 text-blue-600 font-medium">{tx.type}</td>
+              <td className="px-5 py-3 font-bold text-gray-900">{formatRupee(tx.amount)}</td>
+              <td className="px-5 py-3 text-gray-500">{tx.date}</td>
+              <td className="px-5 py-3 font-mono text-gray-500">{tx.utr}</td>
+              <td className="px-5 py-3 text-emerald-600 font-semibold">{tx.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// OFFERS TAB
+// ----------------------------------------------------
+function OffersTab({ offer, setOffer }) {
+  const [title, setTitle] = useState(offer.title);
+  const [minSpend, setMinSpend] = useState(offer.minSpend);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    setOffer({
+      title,
+      minSpend: Number(minSpend),
+      rewardPts: 100
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="max-w-lg mx-auto bg-white p-6 rounded-xl border border-gray-200 space-y-4">
+      <div>
+        <h2 className="text-base font-bold text-gray-900">Customer Promotional Offer</h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Reward customers who choose FlexiPay Pay Later at your store
+        </p>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">Offer Title</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-blue-600"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">Minimum Bill (₹)</label>
+        <input
+          type="number"
+          value={minSpend}
+          onChange={(e) => setMinSpend(e.target.value)}
+          className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg outline-none focus:border-blue-600"
+        />
+      </div>
+
+      <button
+        onClick={handleSave}
+        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition"
+      >
+        {saved ? "✓ Offer Saved" : "Update Offer"}
+      </button>
+
+      {/* Customer Preview */}
+      <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 mt-4 text-xs">
+        <span className="text-[11px] font-semibold text-gray-500 uppercase">Live Preview on Consumer App</span>
+        <div className="font-bold text-gray-900 text-sm mt-1">{offer.title}</div>
+        <div className="text-gray-500 mt-0.5">
+          Valid on orders above {formatRupee(offer.minSpend)} using FlexiPay Pay Later
+        </div>
+      </div>
     </div>
   );
 }
