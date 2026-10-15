@@ -76,7 +76,7 @@ class ErrorBoundary extends Component {
 function normalizeTx(tx) {
   if (!tx || typeof tx !== "object") return null;
   const merchant = tx.merchant || "Merchant";
-  const mode = tx.mode || tx.type || "FlexiPay Pay Later";
+  const mode = tx.mode || tx.type || "Buy now, Pay later";
   const initials =
     tx.initials ||
     merchant
@@ -109,7 +109,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "SS",
     amount: 2500,
     date: "Today, 7:32 PM",
-    mode: "FlexiPay Pay Later",
+    mode: "Buy now, Pay later",
     utr: "429108420192",
     status: "Completed",
     rewardEarned: 25
@@ -121,7 +121,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "ZG",
     amount: 840,
     date: "Today, 3:15 PM",
-    mode: "FlexiPay Pay Later",
+    mode: "Buy now, Pay later",
     utr: "429108119284",
     status: "Completed",
     rewardEarned: 10
@@ -145,7 +145,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "AP",
     amount: 610,
     date: "13 Oct 2026",
-    mode: "FlexiPay Pay Later",
+    mode: "Buy now, Pay later",
     utr: "428910492819",
     status: "Completed",
     rewardEarned: 8
@@ -157,7 +157,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "CR",
     amount: 4200,
     date: "08 Oct 2026",
-    mode: "FlexiPay Pay Later",
+    mode: "Buy now, Pay later",
     utr: "428201948210",
     status: "Completed",
     rewardEarned: 50
@@ -225,6 +225,10 @@ function App() {
 
   // Execute payment
   const handlePay = () => {
+    let modeText = "Buy now, Pay later";
+    if (method === "hdfc") modeText = "HDFC Bank •••• 4812";
+    if (method === "sbi") modeText = "SBI •••• 8912";
+
     const rawTx = {
       id: "tx_" + Date.now(),
       merchant: merchant || "Merchant",
@@ -237,7 +241,7 @@ function App() {
         .toUpperCase(),
       amount: amount,
       date: "Just now",
-      mode: method === "later" ? "FlexiPay Pay Later" : "HDFC Bank •••• 4812",
+      mode: modeText,
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
       status: "Completed",
       rewardEarned: method === "later" ? 25 : 5
@@ -531,7 +535,7 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
       <div className="rounded-2xl border border-gray-200 p-5 bg-white shadow-xs">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            FlexiPay Pay Later
+            Buy now, Pay later
           </span>
           <span className="text-xs font-medium text-gray-500">
             Limit: {formatRupee(creditLimit)}
@@ -810,15 +814,16 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
 
       <div>
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          Payment Option
+          PAYMENT OPTION
         </div>
 
         <div className="space-y-2.5">
+          {/* Buy now, Pay later Option */}
           <label
             onClick={() => setMethod("later")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
               method === "later"
-                ? "border-blue-600 bg-blue-50/40"
+                ? "border-blue-600 bg-blue-50/40 ring-1 ring-blue-600"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
@@ -832,7 +837,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-900">FlexiPay Pay Later</span>
+                  <span className="text-sm font-bold text-gray-900">Buy now, Pay later</span>
                   <span className="text-xs font-semibold text-blue-700">30-day 0% interest</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
@@ -842,11 +847,12 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
             </div>
           </label>
 
+          {/* HDFC Bank Option */}
           <label
-            onClick={() => setMethod("bank")}
+            onClick={() => setMethod("hdfc")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
-              method === "bank"
-                ? "border-blue-600 bg-blue-50/40"
+              method === "hdfc"
+                ? "border-blue-600 bg-blue-50/40 ring-1 ring-blue-600"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
@@ -854,12 +860,36 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
               <input
                 type="radio"
                 name="payopt"
-                checked={method === "bank"}
-                onChange={() => setMethod("bank")}
+                checked={method === "hdfc"}
+                onChange={() => setMethod("hdfc")}
                 className="mt-1"
               />
               <div>
                 <div className="text-sm font-bold text-gray-900">HDFC Bank •••• 4812</div>
+                <div className="text-xs text-gray-500 mt-0.5">Instant UPI debit via PIN</div>
+              </div>
+            </div>
+          </label>
+
+          {/* SBI Bank Option */}
+          <label
+            onClick={() => setMethod("sbi")}
+            className={`p-4 rounded-xl border block cursor-pointer transition ${
+              method === "sbi"
+                ? "border-blue-600 bg-blue-50/40 ring-1 ring-blue-600"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <input
+                type="radio"
+                name="payopt"
+                checked={method === "sbi"}
+                onChange={() => setMethod("sbi")}
+                className="mt-1"
+              />
+              <div>
+                <div className="text-sm font-bold text-gray-900">SBI •••• 8912</div>
                 <div className="text-xs text-gray-500 mt-0.5">Instant UPI debit via PIN</div>
               </div>
             </div>
@@ -873,8 +903,10 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
         className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50"
       >
         {method === "later"
-          ? `Pay ${formatRupee(amount)} using FlexiPay`
-          : `Pay ${formatRupee(amount)} via UPI`}
+          ? `Pay ${formatRupee(amount)} using Buy now, Pay later`
+          : method === "sbi"
+          ? `Pay ${formatRupee(amount)} via SBI UPI`
+          : `Pay ${formatRupee(amount)} via HDFC UPI`}
       </button>
     </div>
   );
@@ -903,7 +935,11 @@ function SuccessView({ amount, merchant, vpa, method, navigate }) {
         <div className="flex justify-between">
           <span className="text-gray-500">Method</span>
           <span className="font-semibold text-gray-900">
-            {method === "later" ? "FlexiPay Pay Later (0% interest)" : "HDFC Bank •••• 4812"}
+            {method === "later"
+              ? "Buy now, Pay later (0% interest)"
+              : method === "sbi"
+              ? "SBI •••• 8912"
+              : "HDFC Bank •••• 4812"}
           </span>
         </div>
         {method === "later" && (

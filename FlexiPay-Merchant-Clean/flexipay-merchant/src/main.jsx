@@ -28,7 +28,7 @@ const INITIAL_TRANSACTIONS = [
     customer: "Rahul Sharma",
     upiId: "rahul@flexipay",
     amount: 2500,
-    type: "FlexiPay Pay Later",
+    type: "Buy now, Pay later",
     date: "Today, 7:32 PM",
     items: "Aashirvaad Atta 5kg, Fortune Oil 1L, Tata Salt, Amul Ghee",
     utr: "429108420192",
@@ -52,7 +52,7 @@ const INITIAL_TRANSACTIONS = [
     customer: "Rohan Mehta",
     upiId: "rohan@okhdfcbank",
     amount: 1420,
-    type: "FlexiPay Pay Later",
+    type: "Buy now, Pay later",
     date: "Today, 1:40 PM",
     items: "Surf Excel 2kg, Dettol Handwash Refill, Vim Bar 3-Pack",
     utr: "429091824712",
@@ -64,7 +64,7 @@ const INITIAL_TRANSACTIONS = [
     customer: "Vikram Malhotra",
     upiId: "vikram@paytm",
     amount: 3200,
-    type: "FlexiPay Pay Later",
+    type: "Buy now, Pay later",
     date: "Yesterday",
     items: "Dry Fruits Gift Box, Ferrero Rocher, Organic Honey 500g",
     utr: "428910492819",
@@ -136,7 +136,7 @@ function App() {
       customer: customer || "Walk-in Customer",
       upiId: "customer@upi",
       amount: val,
-      type: "FlexiPay Pay Later",
+      type: "Buy now, Pay later",
       date: "Just now",
       items: "Custom Billing Cart",
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
@@ -532,7 +532,7 @@ function OffersTab({ offer, setOffer }) {
       <div>
         <h2 className="text-base font-bold text-gray-900">Customer Promotional Offer</h2>
         <p className="text-xs text-gray-500 mt-0.5">
-          Reward customers who choose FlexiPay Pay Later at your store
+          Reward customers who choose Buy now, Pay later at your store
         </p>
       </div>
 
@@ -568,7 +568,7 @@ function OffersTab({ offer, setOffer }) {
         <span className="text-[11px] font-semibold text-gray-500 uppercase">Live Preview on Consumer App</span>
         <div className="font-bold text-gray-900 text-sm mt-1">{offer.title}</div>
         <div className="text-gray-500 mt-0.5">
-          Valid on orders above {formatRupee(offer.minSpend)} using FlexiPay Pay Later
+          Valid on orders above {formatRupee(offer.minSpend)} using Buy now, Pay later
         </div>
       </div>
     </div>
