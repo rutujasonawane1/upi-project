@@ -212,6 +212,81 @@ function App() {
   const [repayModal, setRepayModal] = useState(false);
   const [selectedTx, setSelectedTx] = useState(null);
 
+  // Cross-App Synchronization Bus (BroadcastChannel + LocalStorage Event)
+  const [activeOffer, setActiveOffer] = useState(() => {
+    try {
+      const savedOffer = localStorage.getItem("flexiMerchantOffer");
+      if (savedOffer) return JSON.parse(savedOffer);
+    } catch (e) {
+      console.warn("Failed reading cached offer:", e);
+    }
+    return {
+      title: "Sharma Super Store Offer",
+      subtitle: "Flat 10% Cashback on Pay Later",
+      minSpend: 1000
+    };
+  });
+
+  // Listen for Merchant App updates (e.g. dynamic bills, offers, remote resets)
+  useEffect(() => {
+    let channel = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        channel = new BroadcastChannel("flexipay_bus");
+        channel.onmessage = (event) => {
+          if (!event || !event.data) return;
+          const { type, payload } = event.data;
+          if (type === "OFFER_UPDATED" && payload) {
+            setActiveOffer({
+              title: payload.title || "Store Special Offer",
+              subtitle: `Orders above ₹${payload.minSpend || 1000} • Cap ₹${payload.cashbackCap || 150}`,
+              minSpend: payload.minSpend || 1000
+            });
+          }
+          if (type === "POS_BILL_GENERATED" && payload) {
+            if (payload.amount) setAmount(Number(payload.amount));
+            if (payload.merchant) setMerchant(payload.merchant);
+            if (payload.vpa) setVpa(payload.vpa);
+          }
+        };
+      }
+    } catch (e) {
+      console.warn("BroadcastChannel initialization error:", e);
+    }
+
+    const handleStorageEvent = (e) => {
+      if (e.key === "flexiMerchantOffer" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setActiveOffer({
+            title: parsed.title || "Store Special Offer",
+            subtitle: `Orders above ₹${parsed.minSpend || 1000} • Cap ₹${parsed.cashbackCap || 150}`,
+            minSpend: parsed.minSpend || 1000
+          });
+        } catch (err) {
+          console.warn("Storage event parse error:", err);
+        }
+      }
+      if (e.key === "flexiPosBill" && e.newValue) {
+        try {
+          const bill = JSON.parse(e.newValue);
+          if (bill.amount) setAmount(Number(bill.amount));
+          if (bill.merchant) setMerchant(bill.merchant);
+          if (bill.vpa) setVpa(bill.vpa);
+        } catch (err) {
+          console.warn("Storage bill parse error:", err);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageEvent);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener("storage", handleStorageEvent);
+    };
+  }, []);
+
   // Persistence
   useEffect(() => {
     try {
@@ -223,7 +298,7 @@ function App() {
     }
   }, [credit, points, transactions]);
 
-  // Execute payment
+  // Execute payment & Broadcast to Merchant App
   const handlePay = () => {
     let modeText = "Buy Now, Pay Later";
     if (method === "hdfc") modeText = "HDFC Bank •••• 4812";
@@ -231,9 +306,9 @@ function App() {
 
     const rawTx = {
       id: "tx_" + Date.now(),
-      merchant: merchant || "Merchant",
-      upiId: vpa || "store@upi",
-      initials: (merchant || "ST")
+      merchant: merchant || "Sharma Super Store",
+      upiId: vpa || "sharma@flexipay",
+      initials: (merchant || "SS")
         .split(" ")
         .map((w) => w[0])
         .join("")
@@ -257,6 +332,47 @@ function App() {
     }
 
     setTransactions((prev) => [newTx, ...prev]);
+
+    // Broadcast payment completion to Merchant App (via Relay Server + BroadcastChannel)
+    try {
+      const syncPayload = {
+        amount: Number(amount),
+        customer: "Rahul Sharma",
+        upiId: "rahul@flexipay",
+        mode: modeText,
+        utr: newTx.utr,
+        timestamp: Date.now()
+      };
+
+      console.log("[Customer Pay] Broadcasting payment:", syncPayload);
+
+      // 1. Send via local HTTP sync relay (crosses localhost port boundary 5173 -> 5174 seamlessly)
+      fetch("http://localhost:4000/api/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(syncPayload)
+      }).then(r => r.json()).then(res => {
+        console.log("[Customer Pay] Synced to Relay Server successfully:", res);
+      }).catch(err => {
+        console.warn("[Customer Pay] Relay Server fetch skipped/offline:", err);
+      });
+
+      // 2. Storage bus trigger
+      localStorage.removeItem("flexiLastSyncPayment");
+      localStorage.setItem("flexiLastSyncPayment", JSON.stringify(syncPayload));
+
+      // 3. BroadcastChannel trigger
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("flexipay_bus");
+        bc.postMessage({ type: "PAYMENT_COMPLETED", payload: syncPayload });
+        setTimeout(() => {
+          try { bc.close(); } catch (err) {}
+        }, 1000);
+      }
+    } catch (e) {
+      console.warn("Cross-app broadcast error:", e);
+    }
+
     navigate("/success");
   };
 
@@ -352,6 +468,7 @@ function App() {
               creditLimit={creditLimit}
               transactions={transactions}
               points={points}
+              activeOffer={activeOffer}
               navigate={navigate}
               onSelectTx={(tx) => setSelectedTx(tx)}
               onRepayClick={() => setRepayModal(true)}
@@ -420,6 +537,7 @@ function App() {
               creditLimit={creditLimit}
               transactions={transactions}
               points={points}
+              activeOffer={activeOffer}
               navigate={navigate}
               onSelectTx={(tx) => setSelectedTx(tx)}
               onRepayClick={() => setRepayModal(true)}
@@ -531,7 +649,7 @@ function App() {
 // ----------------------------------------------------
 // HOME VIEW
 // ----------------------------------------------------
-function HomeView({ credit, creditLimit, transactions, points, navigate, onSelectTx, onRepayClick }) {
+function HomeView({ credit, creditLimit, transactions, points, activeOffer, navigate, onSelectTx, onRepayClick }) {
   const used = creditLimit - credit;
 
   const people = [
@@ -621,20 +739,24 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
         </button>
       </div>
 
-      {/* Clean Store Offer Banner */}
+      {/* Clean Store Offer Banner - Synced with Merchant Campaign */}
       <div className="p-4 rounded-xl border border-orange-100 bg-orange-50/50 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-[#F47920] text-white flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-[#F47920] text-white flex items-center justify-center shrink-0">
             <Tag size={18} />
           </div>
-          <div>
-            <div className="text-xs font-bold text-gray-900">Sharma Super Store Offer</div>
-            <div className="text-[11px] text-gray-600">Flat 10% Cashback on Pay Later</div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-gray-900 truncate">
+              {activeOffer?.title || "Sharma Super Store Offer"}
+            </div>
+            <div className="text-[11px] text-gray-600 truncate">
+              {activeOffer?.subtitle || "Flat 10% Cashback on Pay Later"}
+            </div>
           </div>
         </div>
         <button
           onClick={() => navigate("/scan")}
-          className="px-3 py-1.5 text-xs font-semibold bg-white border border-orange-200 text-[#F47920] rounded-lg hover:bg-orange-50"
+          className="px-3 py-1.5 text-xs font-semibold bg-white border border-orange-200 text-[#F47920] rounded-lg hover:bg-orange-50 shrink-0 ml-2"
         >
           Scan
         </button>
@@ -728,6 +850,38 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
     setAmount(s.defaultAmt);
   };
 
+  const [scannedBill, setScannedBill] = useState(() => {
+    try {
+      const saved = localStorage.getItem("flexiPosBill");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  });
+
+  const handleScanFromPos = () => {
+    try {
+      const saved = localStorage.getItem("flexiPosBill");
+      if (saved) {
+        const bill = JSON.parse(saved);
+        if (bill && bill.amount) {
+          setAmount(Number(bill.amount));
+          setMerchant(bill.merchant || "Sharma Super Store");
+          setVpa(bill.vpa || "sharma@flexipay");
+          setScannedBill(bill);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Scan error:", e);
+    }
+    // Fallback if no bill currently in storage
+    setAmount(2500);
+    setMerchant("Sharma Super Store");
+    setVpa("sharma@flexipay");
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center pt-2">
@@ -735,10 +889,20 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
         <p className="text-xs text-gray-500">Scan any store QR code to pay using FlexiPay</p>
       </div>
 
-      {/* Clean Scanner Box */}
-      <div className="w-56 h-56 mx-auto rounded-2xl border-2 border-gray-300 flex flex-col items-center justify-center bg-gray-50 text-gray-400">
-        <Scan size={48} className="text-gray-400" />
-        <span className="text-xs text-gray-500 mt-3 font-medium">Point camera at QR code</span>
+      {/* Clean Scanner Box with Live Detect */}
+      <div className="w-60 p-4 mx-auto rounded-2xl border-2 border-dashed border-[#F47920] flex flex-col items-center justify-center bg-orange-50/30 text-gray-600 space-y-2">
+        <div className="w-14 h-14 rounded-full bg-orange-100 text-[#F47920] flex items-center justify-center">
+          <Scan size={32} />
+        </div>
+        <span className="text-xs text-gray-700 font-semibold text-center">
+          Point at Sharma Store POS QR
+        </span>
+        <button
+          onClick={handleScanFromPos}
+          className="px-3.5 py-1.5 text-xs font-bold bg-[#F47920] text-white rounded-lg hover:bg-[#E06710] shadow-xs transition cursor-pointer"
+        >
+          ⚡ Auto-Detect POS Bill
+        </button>
       </div>
 
       {/* Select Demo Store */}

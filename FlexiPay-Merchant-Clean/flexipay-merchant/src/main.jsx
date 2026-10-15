@@ -123,6 +123,7 @@ function App() {
   const [voiceLang, setVoiceLang] = useState("hi-IN"); // "hi-IN" | "en-IN"
   const [copiedVpa, setCopiedVpa] = useState(false);
   const [settledToast, setSettledToast] = useState(false);
+  const [liveSyncToast, setLiveSyncToast] = useState(null);
 
   // POS State
   const [amount, setAmount] = useState("2500");
@@ -141,8 +142,156 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [tab]);
 
+  // Soundbox Voice & Chime Announcement
+  const playChime = () => {
+    try {
+      if (typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext)) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+        if (ctx.state === "suspended") {
+          ctx.resume();
+        }
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      }
+    } catch (e) {
+      console.warn("Chime error:", e);
+    }
+  };
 
+  const announceSoundbox = (amt, forcedLang) => {
+    console.log("[Soundbox] Announcing payment received:", amt);
+    playChime();
 
+    if (!soundboxEnabled) return;
+    const lang = forcedLang || voiceLang;
+    const text =
+      lang === "hi-IN"
+        ? `FlexiPay par ${amt} rupaye prapt hue.`
+        : `Received ${amt} rupees on FlexiPay.`;
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.lang = lang;
+        utterance.onerror = (e) => console.warn("[Soundbox speech error]", e);
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn("Speech synthesis error:", err);
+      }
+    }
+  };
+
+  // Cross-App Synchronization Bus (BroadcastChannel + LocalStorage Event)
+  const soundboxEnabledRef = React.useRef(soundboxEnabled);
+  const voiceLangRef = React.useRef(voiceLang);
+  useEffect(() => {
+    soundboxEnabledRef.current = soundboxEnabled;
+    voiceLangRef.current = voiceLang;
+  }, [soundboxEnabled, voiceLang]);
+
+  useEffect(() => {
+    let channel = null;
+
+    const processIncomingPayment = (payload) => {
+      console.log("[Merchant Received Sync Event]", payload);
+      if (!payload || payload.amount === undefined || payload.amount === null) return;
+      const amt = Number(payload.amount);
+      const mode = payload.mode || "Buy Now, Pay Later";
+      const custName = payload.customer || "Rahul Sharma";
+
+      setSales((prev) => prev + amt);
+      setLastPaidMode(mode);
+      setPaid(true);
+
+      const newTx = {
+        id: "ord_" + (payload.timestamp || Date.now()),
+        customer: custName,
+        upiId: payload.upiId || "rahul@flexipay",
+        initials: "RS",
+        amount: amt,
+        type: mode,
+        date: "Just now (Live)",
+        items: "FlexiPay Consumer Checkout",
+        utr: String(payload.utr || Math.floor(400000000000 + Math.random() * 900000000000)),
+        mdr: "₹0.00 (0% Promo)",
+        status: "Settled",
+        phone: "+91 98201 44821"
+      };
+
+      setTransactions((prev) => [newTx, ...prev]);
+
+      // Announce immediately via soundbox
+      announceSoundbox(amt, voiceLangRef.current);
+
+      // Show high-priority toast
+      setLiveSyncToast(`Received ${formatRupee(amt)} from ${custName} via ${mode}`);
+      setTimeout(() => setLiveSyncToast(null), 6000);
+    };
+
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        channel = new BroadcastChannel("flexipay_bus");
+        channel.onmessage = (event) => {
+          console.log("[Merchant flexipay_bus message]", event?.data);
+          if (!event || !event.data) return;
+          const { type, payload } = event.data;
+          if (type === "PAYMENT_COMPLETED" && payload) {
+            processIncomingPayment(payload);
+          }
+        };
+      }
+    } catch (e) {
+      console.warn("Merchant BroadcastChannel error:", e);
+    }
+
+    const handleStorage = (e) => {
+      console.log("[Merchant storage event]", e.key, e.newValue);
+      if (e.key === "flexiLastSyncPayment" && e.newValue) {
+        try {
+          const payload = JSON.parse(e.newValue);
+          processIncomingPayment(payload);
+        } catch (err) {
+          console.warn("Storage sync parse error:", err);
+        }
+      }
+    };
+
+    // Fast polling to sync-server on port 4000 to bridge cross-origin port isolation
+    let lastPollTime = Date.now();
+    const pollInterval = setInterval(() => {
+      fetch(`http://localhost:4000/api/poll-payment?since=${lastPollTime}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.newPayments && data.newPayments.length > 0) {
+            lastPollTime = data.serverTime || Date.now();
+            data.newPayments.forEach(p => {
+              processIncomingPayment(p);
+            });
+          }
+        })
+        .catch(() => {
+          // Sync server offline or restarting
+        });
+    }, 700);
+
+    return () => {
+      clearInterval(pollInterval);
+      if (channel) channel.close();
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   // Quick Cart Items
   const quickItems = [
@@ -151,31 +300,21 @@ function App() {
     { name: "Monthly Super Saver", price: 2500 }
   ];
 
-  // Custom Store Offer Campaign
-  const [offer, setOffer] = useState({
-    title: "Flat 10% Cashback on Buy Now, Pay Later",
-    minSpend: 1000,
-    rewardPts: 100,
-    cashbackCap: 150
-  });
-
-  // Soundbox Voice Announcement
-  const announceSoundbox = (amt, forcedLang) => {
-    if (!soundboxEnabled) return;
-    const lang = forcedLang || voiceLang;
-    const text =
-      lang === "hi-IN"
-        ? `FlexiPay par ${amt} rupaye prapt hue.`
-        : `Received ${amt} rupees on FlexiPay.`;
-
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.lang = lang;
-      window.speechSynthesis.speak(utterance);
+  // Custom Store Offer Campaign (with LocalStorage initial state)
+  const [offer, setOffer] = useState(() => {
+    try {
+      const saved = localStorage.getItem("flexiMerchantOffer");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
     }
-  };
+    return {
+      title: "Flat 10% Cashback on Buy Now, Pay Later",
+      minSpend: 1000,
+      rewardPts: 100,
+      cashbackCap: 150
+    };
+  });
 
   const handleCopyVpa = () => {
     navigator.clipboard.writeText("sharma@flexipay");
@@ -187,6 +326,25 @@ function App() {
     if (!amount || Number(amount) <= 0) return;
     setQrGenerated(true);
     setPaid(false);
+
+    // Broadcast generated bill to Consumer App
+    const billPayload = {
+      amount: Number(amount),
+      merchant: "Sharma Super Store",
+      vpa: "sharma@flexipay",
+      customer: customer || "Walk-in Customer",
+      timestamp: Date.now()
+    };
+    try {
+      localStorage.setItem("flexiPosBill", JSON.stringify(billPayload));
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("flexipay_bus");
+        bc.postMessage({ type: "POS_BILL_GENERATED", payload: billPayload });
+        setTimeout(() => bc.close(), 100);
+      }
+    } catch (e) {
+      console.warn("Bill broadcast error:", e);
+    }
   };
 
   const handleSimulatePayment = (mode = "Buy Now, Pay Later") => {
@@ -478,6 +636,22 @@ function App() {
           <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-tab-enter">
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
             Payout initiated! {formatRupee(sales)} transferred to HDFC Bank A/C ending in 9921.
+          </div>
+        )}
+
+        {/* Real-time Customer Payment Live Sync Alert */}
+        {liveSyncToast && (
+          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs sm:text-sm font-bold flex items-center justify-between shadow-lg animate-tab-enter">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0"></span>
+              <span>🔔 LIVE PAYMENT: {liveSyncToast}</span>
+            </div>
+            <button
+              onClick={() => setLiveSyncToast(null)}
+              className="px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded text-xs ml-2 cursor-pointer"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -1093,13 +1267,26 @@ function OffersTab({ offer, setOffer }) {
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    setOffer({
+    const updatedOffer = {
       title,
       minSpend: Number(minSpend),
       cashbackCap: Number(cashbackCap),
       rewardPts: 100
-    });
+    };
+    setOffer(updatedOffer);
     setSaved(true);
+
+    try {
+      localStorage.setItem("flexiMerchantOffer", JSON.stringify(updatedOffer));
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("flexipay_bus");
+        bc.postMessage({ type: "OFFER_UPDATED", payload: updatedOffer });
+        setTimeout(() => bc.close(), 100);
+      }
+    } catch (e) {
+      console.warn("Offer broadcast error:", e);
+    }
+
     setTimeout(() => setSaved(false), 2000);
   };
 
