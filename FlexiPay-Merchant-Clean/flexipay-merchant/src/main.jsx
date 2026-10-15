@@ -21,16 +21,93 @@ import {
   RefreshCw,
   Building2,
   Filter,
-  Check
+  Check,
+  Search,
+  Calendar,
+  CreditCard,
+  SlidersHorizontal,
+  ChevronRight,
+  Wifi,
+  FileSpreadsheet
 } from "lucide-react";
 import "./index.css";
 
-const INITIAL_TRANSACTIONS = [
-  { id: "TX9841", customer: "Demo Customer", amount: 2500, type: "FlexiPay Pay Later", status: "Successful", time: "Just now" },
-  { id: "TX9840", customer: "Pooja Verma", amount: 850, type: "UPI Direct", status: "Successful", time: "10 mins ago" },
-  { id: "TX9839", customer: "Amit Patel", amount: 1200, type: "FlexiPay Pay Later", status: "Successful", time: "42 mins ago" },
-  { id: "TX9838", customer: "Rajesh Kumar", amount: 3100, type: "FlexiPay Pay Later", status: "Successful", time: "2 hours ago" },
-  { id: "TX9837", customer: "Sneha Nair", amount: 420, type: "UPI Direct", status: "Successful", time: "3 hours ago" }
+// ----------------------------------------------------
+// REALISTIC MERCHANT DATASET
+// ----------------------------------------------------
+const REAL_STORE_TRANSACTIONS = [
+  {
+    id: "TX-9842",
+    customer: "Rahul Sharma",
+    vpa: "rahul@flexipay",
+    amount: 2500,
+    type: "FlexiPay Pay Later",
+    status: "Successful",
+    time: "Just now",
+    items: "Aashirvaad Atta 5kg, Fortune Oil 1L, Tata Salt 1kg, Amul Ghee 1L",
+    utr: "429108420192",
+    mdr: "₹0.00 (0% Promo)"
+  },
+  {
+    id: "TX-9841",
+    customer: "Priya Sharma",
+    vpa: "priya@okaxis",
+    amount: 850,
+    type: "UPI Direct (GPay)",
+    status: "Successful",
+    time: "14 mins ago",
+    items: "Cadbury Celebrations, Tropicana Juice 1L, Britannia GoodDay",
+    utr: "429108119284",
+    mdr: "₹0.00 (Free UPI)"
+  },
+  {
+    id: "TX-9840",
+    customer: "Rohan Mehta",
+    vpa: "rohan@okhdfcbank",
+    amount: 1420,
+    type: "FlexiPay Pay Later",
+    status: "Successful",
+    time: "48 mins ago",
+    items: "Surf Excel 2kg, Dettol Handwash Refill, Vim Bar 3-Pack",
+    utr: "429091824712",
+    mdr: "₹0.00 (0% Promo)"
+  },
+  {
+    id: "TX-9839",
+    customer: "Vikram Malhotra",
+    vpa: "vikram@paytm",
+    amount: 3200,
+    type: "FlexiPay Pay Later",
+    status: "Successful",
+    time: "2 hours ago",
+    items: "Dry Fruits Gift Box, Ferrero Rocher, Organic Honey 500g",
+    utr: "428910492819",
+    mdr: "₹0.00 (0% Promo)"
+  },
+  {
+    id: "TX-9838",
+    customer: "Ananya Iyer",
+    vpa: "ananya@ibl",
+    amount: 480,
+    type: "UPI Direct (PhonePe)",
+    status: "Successful",
+    time: "3 hours ago",
+    items: "Amul Butter 500g, Brown Bread, Epigamia Yogurt",
+    utr: "428201948210",
+    mdr: "₹0.00 (Free UPI)"
+  },
+  {
+    id: "TX-9837",
+    customer: "Kavita Patel",
+    vpa: "kavita@icici",
+    amount: 1950,
+    type: "FlexiPay Pay Later",
+    status: "Successful",
+    time: "5 hours ago",
+    items: "Basmati Rice 5kg, Toor Dal 2kg, MDH Spices Combo",
+    utr: "427901824719",
+    mdr: "₹0.00 (0% Promo)"
+  }
 ];
 
 function formatRupee(n) {
@@ -38,30 +115,32 @@ function formatRupee(n) {
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard" | "receive" | "standee" | "offers" | "ledger"
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [sales, setSales] = useState(18450);
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [transactions, setTransactions] = useState(REAL_STORE_TRANSACTIONS);
   const [soundboxEnabled, setSoundboxEnabled] = useState(true);
   const [audioFeedback, setAudioFeedback] = useState("");
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
 
-  // Bill & QR Generator State
+  // POS Generator
   const [billAmount, setBillAmount] = useState("2500");
+  const [customerName, setCustomerName] = useState("Rahul Sharma");
   const [qrReady, setQrReady] = useState(false);
   const [paymentReceived, setPaymentReceived] = useState(false);
 
-  // Store Offer State
+  // Store Offer
   const [offer, setOffer] = useState({
-    title: "Flat 10% Cashback",
+    title: "Flat 10% Cashback up to ₹100",
     minSpend: 1000,
     rewardPts: 100,
     active: true
   });
 
-  // Soundbox Announcement Simulator (Speech Synthesis)
+  // Soundbox Announcement Simulator
   const triggerSoundbox = (amt) => {
     if (!soundboxEnabled) return;
     const text = `FlexiPay par ${amt} rupaye prapt hue.`;
-    setAudioFeedback(`🔊 "FlexiPay pe ₹${amt} prapt hue"`);
+    setAudioFeedback(`🔊 Soundbox Alert: "FlexiPay pe ₹${amt} prapt hue"`);
 
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -74,7 +153,7 @@ function App() {
     setTimeout(() => setAudioFeedback(""), 4500);
   };
 
-  // Generate QR for Customer
+  // Generate QR
   const handleGenerateQr = () => {
     const val = Number(billAmount);
     if (!val || val <= 0) return;
@@ -87,12 +166,16 @@ function App() {
     const val = Number(billAmount) || 2500;
     setSales((s) => s + val);
     const newTx = {
-      id: "TX" + Math.floor(1000 + Math.random() * 9000),
-      customer: "Walk-in Customer",
+      id: "TX-" + Math.floor(9843 + Math.random() * 900),
+      customer: customerName || "Customer",
+      vpa: "customer@upi",
       amount: val,
       type: "FlexiPay Pay Later",
       status: "Successful",
-      time: "Just now"
+      time: "Just now",
+      items: "Custom POS Counter Cart",
+      utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
+      mdr: "₹0.00 (0% Promo)"
     };
     setTransactions((prev) => [newTx, ...prev]);
     setPaymentReceived(true);
@@ -102,9 +185,9 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       
-      {/* Top Merchant Brand Bar */}
+      {/* Top Store Header */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-800 to-indigo-700 text-white shadow-md">
               <Store size={22} />
@@ -116,12 +199,17 @@ function App() {
                   <ShieldCheck size={12} /> Verified Merchant
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">UPI VPA: <b>sharma@flexipay</b></p>
+              <p className="text-xs text-slate-500 font-medium">
+                GSTIN: <b>27AABCU9603R1ZM</b> • VPA: <b>sharma@flexipay</b>
+              </p>
             </div>
           </div>
 
-          {/* Soundbox Status Pill */}
-          <div className="flex items-center gap-3">
+          {/* Soundbox & Status Pills */}
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-100">
+              <Wifi size={12} /> POS Terminal Online
+            </div>
             <button
               onClick={() => setSoundboxEnabled((prev) => !prev)}
               className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition border ${
@@ -132,19 +220,19 @@ function App() {
               title="Toggle Merchant Audio Soundbox"
             >
               {soundboxEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-              <span className="hidden sm:inline">Soundbox: {soundboxEnabled ? "Active" : "Muted"}</span>
+              <span className="hidden md:inline">Soundbox: {soundboxEnabled ? "Active" : "Muted"}</span>
             </button>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs with Smooth Active State */}
         <div className="mx-auto flex max-w-6xl overflow-x-auto px-4 sm:px-6 border-t border-slate-100 no-scrollbar">
           {[
             { id: "dashboard", label: "Store Dashboard", icon: TrendingUp },
-            { id: "receive", label: "Receive Payment (QR)", icon: QrCode },
+            { id: "receive", label: "POS Bill & QR", icon: QrCode },
             { id: "standee", label: "Counter Standee", icon: Printer },
-            { id: "offers", label: "Customer Offers", icon: Tag },
-            { id: "ledger", label: "Transactions Ledger", icon: Receipt }
+            { id: "offers", label: "Store Offers", icon: Tag },
+            { id: "ledger", label: "Collections Ledger", icon: Receipt }
           ].map(({ id, label, icon: Icon }) => {
             const active = activeTab === id;
             return (
@@ -165,7 +253,7 @@ function App() {
         </div>
       </header>
 
-      {/* Audio Announcement Alert Banner */}
+      {/* Audio Announcement Toast */}
       {audioFeedback && (
         <div className="sticky top-[105px] z-30 bg-purple-900 text-white px-4 py-2.5 text-center text-xs font-bold shadow-md animate-in fade-in duration-200 flex items-center justify-center gap-2">
           <Sparkles size={16} className="text-amber-400" />
@@ -173,8 +261,8 @@ function App() {
         </div>
       )}
 
-      {/* Main Body */}
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      {/* Main Container */}
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 animate-tab-enter">
         {activeTab === "dashboard" && (
           <DashboardTab
             sales={sales}
@@ -188,6 +276,7 @@ function App() {
             onStandee={() => setActiveTab("standee")}
             onSoundboxTest={() => triggerSoundbox(2500)}
             onViewLedger={() => setActiveTab("ledger")}
+            onSelectReceipt={(tx) => setSelectedReceipt(tx)}
           />
         )}
 
@@ -195,6 +284,8 @@ function App() {
           <ReceiveTab
             amount={billAmount}
             setAmount={setBillAmount}
+            customerName={customerName}
+            setCustomerName={setCustomerName}
             qrReady={qrReady}
             paymentReceived={paymentReceived}
             onGenerate={handleGenerateQr}
@@ -210,8 +301,87 @@ function App() {
 
         {activeTab === "offers" && <OffersTab offer={offer} setOffer={setOffer} />}
 
-        {activeTab === "ledger" && <LedgerTab transactions={transactions} />}
+        {activeTab === "ledger" && (
+          <LedgerTab
+            transactions={transactions}
+            onSelectReceipt={(tx) => setSelectedReceipt(tx)}
+          />
+        )}
       </main>
+
+      {/* Bill Receipt Modal */}
+      {selectedReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="rounded-xl bg-purple-100 p-2 text-purple-700">
+                  <Receipt size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Store Tax Invoice</h3>
+                  <p className="text-[11px] text-slate-500 font-mono">{selectedReceipt.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedReceipt(null)}
+                className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="my-4 text-center">
+              <div className="text-3xl font-extrabold text-slate-900">
+                {formatRupee(selectedReceipt.amount)}
+              </div>
+              <p className="text-xs text-emerald-600 font-bold mt-1 flex items-center justify-center gap-1">
+                <CheckCircle2 size={13} /> {selectedReceipt.status} • Settled to HDFC Bank
+              </p>
+            </div>
+
+            <div className="space-y-2 rounded-2xl bg-slate-50 p-4 text-xs border border-slate-100">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Customer</span>
+                <span className="font-bold text-slate-900">{selectedReceipt.customer}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Items Purchased</span>
+                <span className="font-medium text-slate-800 text-right max-w-[200px] truncate">
+                  {selectedReceipt.items}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payment Mode</span>
+                <span className="font-bold text-purple-700">{selectedReceipt.type}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Bank UTR</span>
+                <span className="font-mono text-slate-700 font-semibold">{selectedReceipt.utr}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">MDR Commission Fee</span>
+                <span className="font-bold text-emerald-600">{selectedReceipt.mdr}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 rounded-2xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition flex items-center justify-center gap-1.5"
+              >
+                <Printer size={15} /> Print Receipt
+              </button>
+              <button
+                onClick={() => setSelectedReceipt(null)}
+                className="flex-1 rounded-2xl border border-slate-200 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -219,17 +389,18 @@ function App() {
 // ----------------------------------------------------
 // DASHBOARD TAB
 // ----------------------------------------------------
-function DashboardTab({ sales, transactions, offer, onReceive, onStandee, onSoundboxTest, onViewLedger }) {
+function DashboardTab({ sales, transactions, offer, onReceive, onStandee, onSoundboxTest, onViewLedger, onSelectReceipt }) {
   const payLaterCount = transactions.filter((t) => t.type.includes("Later")).length;
   const payLaterPercent = Math.round((payLaterCount / transactions.length) * 100) || 68;
 
   return (
     <div className="space-y-6">
-      {/* Welcome Banner */}
+      
+      {/* Banner / Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Merchant POS Overview</h1>
-          <p className="mt-0.5 text-xs text-slate-500">Live store collections and UPI FlexiPay settlements</p>
+          <p className="mt-0.5 text-xs text-slate-500">Live store collections, settlements, and UPI soundbox</p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -255,73 +426,73 @@ function DashboardTab({ sales, transactions, offer, onReceive, onStandee, onSoun
         <KpiCard
           title="Today's Collections"
           value={formatRupee(sales)}
-          badge="+14% vs yesterday"
+          badge="+18% vs yesterday"
           badgeType="positive"
           subtitle="Direct UPI & FlexiPay"
         />
         <KpiCard
-          title="Transactions Count"
+          title="Completed Transactions"
           value={transactions.length}
-          badge="100% Success"
+          badge="100% Success Rate"
           badgeType="positive"
-          subtitle="All transactions verified"
+          subtitle="All transactions settled"
         />
         <KpiCard
           title="FlexiPay Pay Later Share"
           value={`${payLaterPercent}%`}
-          badge="Higher Basket Value"
+          badge="High Basket Value"
           badgeType="highlight"
-          subtitle="Average order: ₹2,100"
+          subtitle="Avg order: ₹2,100"
         />
         <KpiCard
           title="Next Bank Settlement"
           value={formatRupee(sales)}
           badge="Tomorrow 07:00 AM"
           badgeType="neutral"
-          subtitle="0% MDR • HDFC Bank"
+          subtitle="0% MDR • HDFC Current A/c"
         />
       </div>
 
-      {/* Action Banners */}
+      {/* Interactive Quick Terminals */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="relative overflow-hidden rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-900 to-indigo-900 p-6 text-white shadow-md">
+        <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-900 to-indigo-900 p-6 text-white shadow-md relative overflow-hidden">
           <div className="relative z-10">
             <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200">
-              Quick Collect
+              POS Terminal
             </span>
             <h3 className="mt-2 text-xl font-bold">Generate Dynamic Bill QR</h3>
             <p className="mt-1 text-xs text-purple-200 max-w-sm">
-              Enter customer's bill amount and display a custom QR code for instant scan.
+              Enter customer's billing amount and show a live QR code. Triggers voice soundbox alert upon scan.
             </p>
             <button
               onClick={onReceive}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-purple-900 shadow hover:bg-purple-50 transition"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-purple-900 shadow hover:bg-purple-50 transition"
             >
-              <span>Open POS Terminal</span>
+              <span>Launch POS Keypad</span>
               <ArrowUpRight size={15} />
             </button>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xs">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xs">
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">
             Counter Display
           </span>
-          <h3 className="mt-2 text-xl font-bold text-slate-900">Official Store Standee</h3>
+          <h3 className="mt-2 text-xl font-bold text-slate-900">Official Counter Standee</h3>
           <p className="mt-1 text-xs text-slate-500 max-w-sm">
-            Showcase your counter standee card accepting Google Pay, PhonePe, Paytm, and FlexiPay.
+            Showcase your acrylic counter standee accepting Google Pay, PhonePe, Paytm, and FlexiPay.
           </p>
           <button
             onClick={onStandee}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-800 hover:bg-slate-100 transition"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100 transition"
           >
-            <span>View Standee Card</span>
+            <span>Preview & Print Standee</span>
             <ArrowUpRight size={15} />
           </button>
         </div>
       </div>
 
-      {/* Recent Ledger Preview */}
+      {/* Collections Feed */}
       <div className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2">
@@ -332,13 +503,17 @@ function DashboardTab({ sales, transactions, offer, onReceive, onStandee, onSoun
             onClick={onViewLedger}
             className="text-xs font-bold text-purple-700 hover:underline"
           >
-            View Full Ledger →
+            View Full Ledger ({transactions.length}) →
           </button>
         </div>
 
         <div className="divide-y divide-slate-100">
           {transactions.slice(0, 4).map((tx) => (
-            <div key={tx.id} className="flex items-center justify-between px-6 py-3.5 hover:bg-slate-50/60 transition">
+            <div
+              key={tx.id}
+              onClick={() => onSelectReceipt(tx)}
+              className="flex items-center justify-between px-6 py-3.5 hover:bg-slate-50/70 transition cursor-pointer"
+            >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-700 font-bold text-sm">
                   {tx.customer[0]}
@@ -389,35 +564,50 @@ function KpiCard({ title, value, badge, badgeType, subtitle }) {
 // ----------------------------------------------------
 // RECEIVE PAYMENT TAB (POS DYNAMIC QR)
 // ----------------------------------------------------
-function ReceiveTab({ amount, setAmount, qrReady, paymentReceived, onGenerate, onSimulate, onReset }) {
-  const presets = [100, 250, 500, 1000, 2500];
+function ReceiveTab({ amount, setAmount, customerName, setCustomerName, qrReady, paymentReceived, onGenerate, onSimulate, onReset }) {
+  const presets = [250, 500, 1000, 2500, 5000];
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-extrabold text-slate-900">POS Payment Terminal</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Generate an instant dynamic QR for your customer
+          Enter bill details to display customer QR on counter screen
         </p>
       </div>
 
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-          Bill Amount (₹)
-        </label>
-        <div className="mt-2 flex items-center rounded-2xl border border-slate-200 px-4 py-3 focus-within:border-purple-600 focus-within:ring-2 focus-within:ring-purple-100">
-          <span className="text-2xl font-extrabold text-slate-400 mr-2">₹</span>
+      <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm space-y-4">
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            Customer Name / Reference
+          </label>
           <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full text-3xl font-extrabold text-slate-900 outline-none"
-            placeholder="0"
+            type="text"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="mt-1.5 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-purple-600"
+            placeholder="e.g. Rahul Sharma"
           />
         </div>
 
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            Bill Amount (₹)
+          </label>
+          <div className="mt-1.5 flex items-center rounded-2xl border border-slate-200 px-4 py-3 focus-within:border-purple-600 focus-within:ring-2 focus-within:ring-purple-100">
+            <span className="text-2xl font-extrabold text-slate-400 mr-2">₹</span>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full text-3xl font-extrabold text-slate-900 outline-none"
+              placeholder="0"
+            />
+          </div>
+        </div>
+
         {/* Quick Amount Presets */}
-        <div className="mt-3 flex gap-2">
+        <div className="flex gap-2">
           {presets.map((p) => (
             <button
               key={p}
@@ -436,7 +626,7 @@ function ReceiveTab({ amount, setAmount, qrReady, paymentReceived, onGenerate, o
         <button
           onClick={onGenerate}
           disabled={!amount || Number(amount) <= 0}
-          className="mt-5 w-full rounded-2xl bg-gradient-to-r from-purple-700 to-indigo-700 py-3.5 font-bold text-white shadow-md hover:opacity-95 transition disabled:opacity-50"
+          className="mt-2 w-full rounded-2xl bg-gradient-to-r from-purple-700 to-indigo-700 py-3.5 font-bold text-white shadow-md hover:opacity-95 transition disabled:opacity-50"
         >
           Generate Dynamic Bill QR
         </button>
@@ -452,10 +642,11 @@ function ReceiveTab({ amount, setAmount, qrReady, paymentReceived, onGenerate, o
           </div>
 
           <div className="mt-4">
-            <div className="text-2xl font-extrabold text-slate-900">
+            <div className="text-3xl font-extrabold text-slate-900">
               {formatRupee(Number(amount))}
             </div>
-            <p className="text-xs text-slate-500 font-medium">Sharma Super Store • sharma@flexipay</p>
+            <p className="text-xs text-slate-600 font-medium">Billed to: <b>{customerName}</b></p>
+            <p className="text-[11px] text-slate-400 font-mono mt-0.5">VPA: sharma@flexipay</p>
           </div>
 
           {!paymentReceived ? (
@@ -468,7 +659,7 @@ function ReceiveTab({ amount, setAmount, qrReady, paymentReceived, onGenerate, o
                 <span>Simulate Customer Payment</span>
               </button>
               <p className="text-[11px] text-slate-400">
-                Simulates customer scanning this QR on their mobile app and paying via FlexiPay
+                Simulates customer paying via FlexiPay Pay Later & triggers voice announcement
               </p>
             </div>
           ) : (
@@ -485,7 +676,7 @@ function ReceiveTab({ amount, setAmount, qrReady, paymentReceived, onGenerate, o
               </p>
               <button
                 onClick={onReset}
-                className="mt-3 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-800"
+                className="mt-3 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition"
               >
                 Collect Another Bill
               </button>
@@ -505,38 +696,36 @@ function StandeeTab() {
     <div className="mx-auto max-w-md space-y-5">
       <div className="text-center">
         <h1 className="text-2xl font-extrabold text-slate-900">Official Counter Standee</h1>
-        <p className="text-xs text-slate-500">Display this at your billing cash counter</p>
+        <p className="text-xs text-slate-500">Showcase this QR acrylic standee at your store counter</p>
       </div>
 
-      {/* Realistic Acrylic Standee Card */}
-      <div className="rounded-3xl border-2 border-slate-300 bg-gradient-to-b from-purple-800 via-purple-700 to-indigo-900 p-6 text-white shadow-2xl text-center">
-        {/* Header */}
-        <div className="flex items-center justify-center gap-2 text-xs font-bold tracking-widest uppercase text-purple-200">
+      <div className="rounded-3xl border-2 border-slate-300 bg-gradient-to-b from-purple-800 via-purple-700 to-indigo-950 p-6 text-white shadow-2xl text-center">
+        <div className="flex items-center justify-center gap-1.5 text-xs font-bold tracking-widest uppercase text-purple-200">
           <ShieldCheck size={16} /> Verified UPI & FlexiPay Merchant
         </div>
 
-        <h2 className="mt-2 text-xl font-extrabold">Sharma Super Store</h2>
-        <p className="text-xs text-purple-200">UPI ID: sharma@flexipay</p>
+        <h2 className="mt-2 text-2xl font-extrabold">Sharma Super Store</h2>
+        <p className="text-xs text-purple-200 font-mono">UPI ID: sharma@flexipay</p>
 
-        {/* QR Code Container */}
         <div className="mx-auto mt-5 w-fit rounded-2xl bg-white p-5 shadow-lg">
           <QRCodeSVG
             value="upi://pay?pa=sharma@flexipay&pn=Sharma%20Super%20Store&cu=INR"
             size={200}
           />
-          <p className="mt-3 text-[11px] font-bold text-slate-800">SCAN & PAY WITH ANY UPI APP</p>
+          <p className="mt-3 text-[11px] font-bold text-slate-800 tracking-wide uppercase">
+            Scan & Pay with Any UPI App
+          </p>
         </div>
 
-        {/* Supported UPI Brand Marks */}
-        <div className="mt-5 rounded-2xl bg-white/10 p-3 backdrop-blur-xs">
-          <p className="text-[10px] font-semibold tracking-wider text-purple-200 uppercase mb-2">
-            Accepted Here
+        <div className="mt-5 rounded-2xl bg-white/10 p-3.5 backdrop-blur-xs">
+          <p className="text-[10px] font-bold tracking-wider text-purple-200 uppercase mb-2">
+            Accepted Payments
           </p>
-          <div className="flex items-center justify-center gap-3 text-xs font-bold">
-            <span className="rounded bg-white/15 px-2 py-0.5">Google Pay</span>
-            <span className="rounded bg-white/15 px-2 py-0.5">PhonePe</span>
-            <span className="rounded bg-white/15 px-2 py-0.5">Paytm</span>
-            <span className="rounded bg-white/15 px-2 py-0.5">FlexiPay</span>
+          <div className="flex items-center justify-center gap-2 text-xs font-bold">
+            <span className="rounded-lg bg-white/15 px-2.5 py-1">Google Pay</span>
+            <span className="rounded-lg bg-white/15 px-2.5 py-1">PhonePe</span>
+            <span className="rounded-lg bg-white/15 px-2.5 py-1">Paytm</span>
+            <span className="rounded-lg bg-white/15 px-2.5 py-1">FlexiPay</span>
           </div>
         </div>
       </div>
@@ -568,13 +757,15 @@ function OffersTab({ offer, setOffer }) {
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900">Customer Promotional Offer</h1>
         <p className="mt-0.5 text-xs text-slate-500">
-          Reward customers who pay using FlexiPay Pay Later at your store
+          Incentivize customers who choose FlexiPay Pay Later at your billing counter
         </p>
       </div>
 
       <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm space-y-4">
         <div>
-          <label className="text-xs font-bold text-slate-700">Offer Title</label>
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Offer Campaign Title
+          </label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -583,7 +774,9 @@ function OffersTab({ offer, setOffer }) {
         </div>
 
         <div>
-          <label className="text-xs font-bold text-slate-700">Minimum Bill Value (₹)</label>
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Minimum Order Value (₹)
+          </label>
           <input
             type="number"
             value={minSpend}
@@ -596,16 +789,16 @@ function OffersTab({ offer, setOffer }) {
           onClick={handleSave}
           className="w-full rounded-2xl bg-purple-700 py-3.5 font-bold text-white shadow-md hover:bg-purple-800 transition"
         >
-          {saved ? "✓ Offer Saved & Active" : "Update Store Offer"}
+          {saved ? "✓ Offer Saved & Live on Consumer App" : "Update Store Offer"}
         </button>
       </div>
 
       {/* Offer Preview Card */}
-      <div className="rounded-3xl border border-purple-100 bg-purple-50/60 p-5">
+      <div className="rounded-3xl border border-purple-200 bg-purple-50/70 p-5">
         <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700">
-          Customer View Preview
+          Consumer App View
         </span>
-        <div className="mt-2 text-base font-bold text-slate-900">{offer.title}</div>
+        <div className="mt-2 text-base font-extrabold text-slate-900">{offer.title}</div>
         <p className="mt-0.5 text-xs text-slate-600">
           On orders above {formatRupee(offer.minSpend)} using FlexiPay Pay Later • Earn 100 Reward Points
         </p>
@@ -617,12 +810,13 @@ function OffersTab({ offer, setOffer }) {
 // ----------------------------------------------------
 // TRANSACTIONS LEDGER TAB
 // ----------------------------------------------------
-function LedgerTab({ transactions }) {
+function LedgerTab({ transactions, onSelectReceipt }) {
   const [search, setSearch] = useState("");
 
   const filtered = transactions.filter((t) =>
     t.customer.toLowerCase().includes(search.toLowerCase()) ||
-    t.type.toLowerCase().includes(search.toLowerCase())
+    t.type.toLowerCase().includes(search.toLowerCase()) ||
+    t.utr.includes(search)
   );
 
   return (
@@ -630,15 +824,17 @@ function LedgerTab({ transactions }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Collections Ledger</h1>
-          <p className="mt-0.5 text-xs text-slate-500">Real-time payment settlements log</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Real-time settled transactions with UTR numbers
+          </p>
         </div>
 
         <input
           type="text"
-          placeholder="Search customer or payment type..."
+          placeholder="Search customer, UTR, or mode..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium outline-none focus:border-purple-600 w-full sm:w-64"
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-medium outline-none focus:border-purple-600 w-full sm:w-72 shadow-2xs"
         />
       </div>
 
@@ -646,23 +842,29 @@ function LedgerTab({ transactions }) {
         <table className="w-full text-left text-xs">
           <thead className="border-b border-slate-100 bg-slate-50/80 font-bold text-slate-600">
             <tr>
-              <th className="px-6 py-3.5">Transaction ID</th>
+              <th className="px-6 py-3.5">Invoice ID</th>
               <th className="px-6 py-3.5">Customer</th>
               <th className="px-6 py-3.5">Payment Method</th>
               <th className="px-6 py-3.5">Amount</th>
+              <th className="px-6 py-3.5">Bank UTR</th>
               <th className="px-6 py-3.5">Status</th>
               <th className="px-6 py-3.5">Time</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.map((t) => (
-              <tr key={t.id} className="hover:bg-slate-50/50 transition">
+              <tr
+                key={t.id}
+                onClick={() => onSelectReceipt(t)}
+                className="hover:bg-slate-50/70 transition cursor-pointer"
+              >
                 <td className="px-6 py-3.5 font-mono text-slate-500">{t.id}</td>
                 <td className="px-6 py-3.5 font-bold text-slate-900">{t.customer}</td>
                 <td className="px-6 py-3.5 text-purple-700 font-semibold">{t.type}</td>
                 <td className="px-6 py-3.5 font-bold text-slate-900">{formatRupee(t.amount)}</td>
+                <td className="px-6 py-3.5 font-mono text-slate-600">{t.utr}</td>
                 <td className="px-6 py-3.5">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-100">
                     <CheckCircle2 size={11} /> {t.status}
                   </span>
                 </td>
