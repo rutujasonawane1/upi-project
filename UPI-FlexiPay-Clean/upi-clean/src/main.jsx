@@ -76,7 +76,7 @@ class ErrorBoundary extends Component {
 function normalizeTx(tx) {
   if (!tx || typeof tx !== "object") return null;
   const merchant = tx.merchant || "Merchant";
-  const mode = tx.mode || tx.type || "Buy now, Pay later";
+  const mode = tx.mode || tx.type || "Buy Now, Pay Later";
   const initials =
     tx.initials ||
     merchant
@@ -109,7 +109,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "SS",
     amount: 2500,
     date: "Today, 7:32 PM",
-    mode: "Buy now, Pay later",
+    mode: "Buy Now, Pay Later",
     utr: "429108420192",
     status: "Completed",
     rewardEarned: 25
@@ -121,7 +121,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "ZG",
     amount: 840,
     date: "Today, 3:15 PM",
-    mode: "Buy now, Pay later",
+    mode: "Buy Now, Pay Later",
     utr: "429108119284",
     status: "Completed",
     rewardEarned: 10
@@ -145,7 +145,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "AP",
     amount: 610,
     date: "13 Oct 2026",
-    mode: "Buy now, Pay later",
+    mode: "Buy Now, Pay Later",
     utr: "428910492819",
     status: "Completed",
     rewardEarned: 8
@@ -157,7 +157,7 @@ const INITIAL_TRANSACTIONS = [
     initials: "CR",
     amount: 4200,
     date: "08 Oct 2026",
-    mode: "Buy now, Pay later",
+    mode: "Buy Now, Pay Later",
     utr: "428201948210",
     status: "Completed",
     rewardEarned: 50
@@ -225,7 +225,7 @@ function App() {
 
   // Execute payment
   const handlePay = () => {
-    let modeText = "Buy now, Pay later";
+    let modeText = "Buy Now, Pay Later";
     if (method === "hdfc") modeText = "HDFC Bank •••• 4812";
     if (method === "sbi") modeText = "SBI •••• 8912";
 
@@ -535,7 +535,7 @@ function HomeView({ credit, creditLimit, transactions, points, navigate, onSelec
       <div className="rounded-2xl border border-gray-200 p-5 bg-white shadow-xs">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Buy now, Pay later
+            Buy Now, Pay Later
           </span>
           <span className="text-xs font-medium text-gray-500">
             Limit: {formatRupee(creditLimit)}
@@ -818,7 +818,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
         </div>
 
         <div className="space-y-2.5">
-          {/* Buy now, Pay later Option */}
+          {/* Buy Now, Pay Later Option */}
           <label
             onClick={() => setMethod("later")}
             className={`p-4 rounded-xl border block cursor-pointer transition ${
@@ -837,7 +837,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-900">Buy now, Pay later</span>
+                  <span className="text-sm font-bold text-gray-900">Buy Now, Pay Later</span>
                   <span className="text-xs font-semibold text-blue-700">30-day 0% interest</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
@@ -903,7 +903,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
         className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50"
       >
         {method === "later"
-          ? `Pay ${formatRupee(amount)} using Buy now, Pay later`
+          ? `Pay ${formatRupee(amount)} using Buy Now, Pay Later`
           : method === "sbi"
           ? `Pay ${formatRupee(amount)} via SBI UPI`
           : `Pay ${formatRupee(amount)} via HDFC UPI`}
@@ -936,7 +936,7 @@ function SuccessView({ amount, merchant, vpa, method, navigate }) {
           <span className="text-gray-500">Method</span>
           <span className="font-semibold text-gray-900">
             {method === "later"
-              ? "Buy now, Pay later (0% interest)"
+              ? "Buy Now, Pay Later (0% interest)"
               : method === "sbi"
               ? "SBI •••• 8912"
               : "HDFC Bank •••• 4812"}
