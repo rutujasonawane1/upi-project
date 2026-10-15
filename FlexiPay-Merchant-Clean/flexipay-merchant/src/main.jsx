@@ -1285,11 +1285,19 @@ function OffersTab({ offer, setOffer }) {
     setSaved(true);
 
     try {
+      fetch("http://localhost:4000/api/offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedOffer)
+      }).catch(() => {});
+
       localStorage.setItem("flexiMerchantOffer", JSON.stringify(updatedOffer));
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
         const bc = new BroadcastChannel("flexipay_bus");
         bc.postMessage({ type: "OFFER_UPDATED", payload: updatedOffer });
-        setTimeout(() => bc.close(), 100);
+        setTimeout(() => {
+          try { bc.close(); } catch (e) {}
+        }, 1000);
       }
     } catch (e) {
       console.warn("Offer broadcast error:", e);

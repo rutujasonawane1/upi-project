@@ -176,7 +176,11 @@ function App() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  const [creditLimit] = useState(25000);
+  const [creditLimit, setCreditLimit] = useState(() => {
+    const saved = localStorage.getItem("flexiCreditLimit");
+    const num = Number(saved);
+    return isNaN(num) || num <= 0 ? 25000 : num;
+  });
   const [credit, setCredit] = useState(() => {
     const saved = localStorage.getItem("flexiCredit");
     const num = Number(saved);
@@ -211,6 +215,18 @@ function App() {
   const [method, setMethod] = useState("later"); // "later" | "bank"
   const [repayModal, setRepayModal] = useState(false);
   const [selectedTx, setSelectedTx] = useState(null);
+  const [aaModal, setAaModal] = useState(false);
+
+  // Upgrade credit limit via Account Aggregator simulation
+  const handleAaUpgrade = (newLimit) => {
+    const boost = newLimit - creditLimit;
+    setCreditLimit(newLimit);
+    setCredit((c) => c + boost);
+    try {
+      localStorage.setItem("flexiCreditLimit", String(newLimit));
+      localStorage.setItem("flexiCredit", String(credit + boost));
+    } catch (e) {}
+  };
 
   // Cross-App Synchronization Bus (BroadcastChannel + LocalStorage Event)
   const [activeOffer, setActiveOffer] = useState(() => {
@@ -281,7 +297,24 @@ function App() {
 
     window.addEventListener("storage", handleStorageEvent);
 
+    // Check for live offers on relay server (cross-port bridge)
+    const offerPoll = setInterval(() => {
+      fetch("http://localhost:4000/api/offer")
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.offer) {
+            setActiveOffer({
+              title: data.offer.title || "Store Special Offer",
+              subtitle: `Orders above ₹${data.offer.minSpend || 1000} • Cap ₹${data.offer.cashbackCap || 150}`,
+              minSpend: data.offer.minSpend || 1000
+            });
+          }
+        })
+        .catch(() => {});
+    }, 1500);
+
     return () => {
+      clearInterval(offerPoll);
       if (channel) channel.close();
       window.removeEventListener("storage", handleStorageEvent);
     };
@@ -527,6 +560,7 @@ function App() {
               creditLimit={creditLimit}
               points={points}
               onRepayClick={() => setRepayModal(true)}
+              onOpenAaModal={() => setAaModal(true)}
             />
           )}
 
@@ -564,19 +598,41 @@ function App() {
           })}
         </nav>
 
-        {/* Minimal Repay Modal */}
+        {/* 45-Day Repayment Modal with Timeline Visualizer */}
         {repayModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-tab-enter">
-              <h3 className="text-base font-bold text-gray-900">Pay FlexiPay Bill</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Due on 5 Nov • 0% Interest</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Pay FlexiPay Bill</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">45-Day Interest-Free Payment Cycle</p>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  0% Interest
+                </span>
+              </div>
 
-              <div className="my-5 p-4 rounded-xl bg-orange-50/50 border border-orange-100">
-                <div className="text-xs text-gray-500">Amount Due</div>
+              {/* 45-Day Timeline Progress Visualizer */}
+              <div className="my-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                <div className="flex justify-between text-[11px] font-semibold text-slate-700">
+                  <span>Day 0 (Purchases)</span>
+                  <span className="text-[#F47920] font-bold">Day 32 (Today)</span>
+                  <span>Day 45 (Due)</span>
+                </div>
+                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="bg-[#F47920] h-full rounded-full" style={{ width: "71%" }}></div>
+                </div>
+                <div className="text-[10px] text-slate-500 text-center">
+                  ⏳ <strong>13 days remaining</strong> to settle with zero interest charges.
+                </div>
+              </div>
+
+              <div className="my-3 p-4 rounded-xl bg-orange-50/50 border border-orange-100">
+                <div className="text-xs text-gray-500">Total Outstanding Due</div>
                 <div className="text-2xl font-black text-gray-900 mt-0.5">
                   {formatRupee(creditLimit - credit)}
                 </div>
-                <div className="text-xs text-gray-600 mt-2">Paying via HDFC Bank •••• 4812</div>
+                <div className="text-xs text-gray-600 mt-2">Auto-Debit via HDFC Bank •••• 4812</div>
               </div>
 
               <div className="flex gap-3">
@@ -584,17 +640,26 @@ function App() {
                   onClick={() => setRepayModal(false)}
                   className="flex-1 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200"
                 >
-                  Cancel
+                  Close
                 </button>
                 <button
                   onClick={handleRepay}
                   className="flex-1 py-3 text-sm font-bold text-white bg-[#F47920] hover:bg-[#E06710] rounded-xl shadow-xs transition"
                 >
-                  Pay Now
+                  Settle Bill Now
                 </button>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Account Aggregator (AA) Underwriting Consent Modal */}
+        {aaModal && (
+          <AaUnderwritingModal
+            creditLimit={creditLimit}
+            onClose={() => setAaModal(false)}
+            onUpgrade={handleAaUpgrade}
+          />
         )}
 
         {/* Minimal Receipt Modal */}
@@ -683,12 +748,12 @@ function HomeView({ credit, creditLimit, transactions, points, activeOffer, navi
         {used > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
             <div>
-              <div className="text-xs text-gray-500">Current bill</div>
-              <div className="text-sm font-bold text-gray-900">{formatRupee(used)} due on 5 Nov</div>
+              <div className="text-xs text-gray-500">Current bill (45-Day Cycle)</div>
+              <div className="text-sm font-bold text-gray-900">{formatRupee(used)} • Due 30 Nov (0% Fee)</div>
             </div>
             <button
               onClick={onRepayClick}
-              className="px-4 py-1.5 text-xs font-semibold text-[#F47920] border border-[#F47920] rounded-full hover:bg-orange-50 transition"
+              className="px-4 py-1.5 text-xs font-semibold text-[#F47920] border border-[#F47920] rounded-full hover:bg-orange-50 transition cursor-pointer"
             >
               Pay bill
             </button>
@@ -1041,10 +1106,10 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-900">Buy Now, Pay Later</span>
-                  <span className="text-xs font-semibold text-[#F47920]">30-day 0% interest</span>
+                  <span className="text-xs font-semibold text-[#F47920]">45-Day 0% Interest</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
-                  Available credit: {formatRupee(credit)} • +25 Reward Points
+                  Available credit: {formatRupee(credit)} • +25 Reward Points • 45-Day Grace Cycle
                 </div>
               </div>
             </div>
@@ -1106,7 +1171,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
         className="w-full py-4 bg-[#F47920] hover:bg-[#E06710] text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50"
       >
         {method === "later"
-          ? `Pay ${formatRupee(amount)} using Buy Now, Pay Later`
+          ? `Pay ${formatRupee(amount)} via 45-Day Pay Later (0% Interest)`
           : method === "sbi"
           ? `Pay ${formatRupee(amount)} via SBI UPI`
           : `Pay ${formatRupee(amount)} via HDFC UPI`}
@@ -1147,8 +1212,8 @@ function SuccessView({ amount, merchant, vpa, method, navigate }) {
         </div>
         {method === "later" && (
           <div className="flex justify-between">
-            <span className="text-gray-500">Repayment Date</span>
-            <span className="font-semibold text-gray-900">5 Nov 2026</span>
+            <span className="text-gray-500">Repayment Cycle</span>
+            <span className="font-semibold text-emerald-700">45 Days (Due 30 Nov 2026)</span>
           </div>
         )}
         <div className="flex justify-between border-t border-gray-200/60 pt-2">
@@ -1266,7 +1331,7 @@ function RewardsView({ points, setPoints }) {
 // ----------------------------------------------------
 // PROFILE & BANK ACCOUNTS VIEW
 // ----------------------------------------------------
-function ProfileView({ credit, creditLimit, points, onRepayClick }) {
+function ProfileView({ credit, creditLimit, points, onRepayClick, onOpenAaModal }) {
   return (
     <div className="space-y-6">
       {/* User Header */}
@@ -1279,6 +1344,30 @@ function ProfileView({ credit, creditLimit, points, onRepayClick }) {
         <div className="text-xs text-emerald-700 font-semibold mt-2 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-full">
           <ShieldCheck size={14} /> Full KYC Verified
         </div>
+      </div>
+
+      {/* Account Aggregator Credit Underwriting Card (PDF Key Feature) */}
+      <div
+        onClick={onOpenAaModal}
+        className="p-4 rounded-xl border border-orange-200 bg-orange-50/40 hover:bg-orange-50 transition cursor-pointer flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-sm shrink-0">
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+              <span>Account Aggregator Underwriting</span>
+              <span className="text-[10px] font-bold text-[#F47920] bg-white border border-orange-200 px-1.5 py-0.2 rounded">
+                RBI Approved AA
+              </span>
+            </div>
+            <div className="text-[11px] text-gray-600 mt-0.5">
+              Current Limit: <strong>{formatRupee(creditLimit)}</strong> • Tap to upgrade to ₹40,000+
+            </div>
+          </div>
+        </div>
+        <ChevronRight size={18} className="text-[#F47920] shrink-0" />
       </div>
 
       {/* Linked Bank Accounts */}
@@ -1312,27 +1401,33 @@ function ProfileView({ credit, creditLimit, points, onRepayClick }) {
       </div>
 
       {/* Credit Score & Health */}
-      <div className="p-4 rounded-xl border border-gray-200 bg-white flex items-center justify-between">
+      <div
+        onClick={onOpenAaModal}
+        className="p-4 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition cursor-pointer flex items-center justify-between"
+      >
         <div>
-          <div className="text-xs text-gray-500">Experian Credit Score</div>
+          <div className="text-xs text-gray-500">Experian Bureau Score</div>
           <div className="text-lg font-bold text-gray-900 mt-0.5">785 • Excellent</div>
-          <div className="text-xs text-gray-500">Eligible for ₹10,000 credit limit increase</div>
+          <div className="text-xs text-[#F47920] font-semibold mt-0.5">
+            Pre-qualified for instant Account Aggregator limit increase →
+          </div>
         </div>
         <ChevronRight size={18} className="text-gray-400" />
       </div>
 
-      {/* Pay Later Statement */}
+      {/* 45-Day Pay Later Statement */}
       <div className="p-4 rounded-xl border border-gray-200 bg-white flex items-center justify-between">
         <div>
-          <div className="text-xs text-gray-500">Current FlexiPay Bill</div>
+          <div className="text-xs text-gray-500">Current FlexiPay Bill (45-Day Cycle)</div>
           <div className="text-base font-bold text-gray-900 mt-0.5">
-            {formatRupee(creditLimit - credit)} Due on 5 Nov
+            {formatRupee(creditLimit - credit)} • Due 30 Nov
           </div>
+          <div className="text-[10px] text-emerald-700 font-medium">0% interest if paid on or before due date</div>
         </div>
         {creditLimit - credit > 0 && (
           <button
             onClick={onRepayClick}
-            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#F47920] rounded-lg hover:bg-[#E06710]"
+            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#F47920] rounded-lg hover:bg-[#E06710] cursor-pointer"
           >
             Pay Dues
           </button>
@@ -1446,6 +1541,333 @@ function HistoryView({ transactions, onSelectTx }) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// ACCOUNT AGGREGATOR (AA) UNDERWRITING MODAL (Sprint 2 / PDF Core)
+// ----------------------------------------------------
+function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
+  const [step, setStep] = useState(1); // 1: Bank Selection, 2: OTP Verification & Consent, 3: Precise API Analyzer, 4: Approved Tier
+  const [selectedBank, setSelectedBank] = useState("HDFC Bank");
+  const [otp, setOtp] = useState(["4", "8", "1", "2"]);
+  const [analyzingStatus, setAnalyzingStatus] = useState("Connecting to RBI NBFC-Account Aggregator (Setu / Finvu)...");
+  const [analysisProgress, setAnalysisProgress] = useState(20);
+
+  // Dynamic calculation: ensure new limit is always higher than current
+  const baseLimit = Math.max(25000, Number(creditLimit) || 25000);
+  const upgradedTier = baseLimit >= 40000 ? 60000 : 40000;
+  const incrementalGain = upgradedTier - baseLimit;
+
+  const banks = [
+    { name: "HDFC Bank", sub: "A/C •••• 4812 (Salary Inflows)", verified: true, score: "High Flow", logo: "🏦" },
+    { name: "State Bank of India", sub: "A/C •••• 8912 (Primary UPI)", verified: true, score: "Stable", logo: "🏛️" },
+    { name: "ICICI Bank", sub: "A/C •••• 1092 (Corporate)", verified: false, score: "Eligible", logo: "💎" },
+    { name: "Axis Bank", sub: "A/C •••• 7731 (Savings)", verified: false, score: "Eligible", logo: "📈" }
+  ];
+
+  const handleStartAnalysis = () => {
+    setStep(3);
+    setAnalysisProgress(25);
+    setTimeout(() => {
+      setAnalyzingStatus("Fetching 12-month encrypted statements from Financial Information Provider...");
+      setAnalysisProgress(50);
+    }, 1100);
+    setTimeout(() => {
+      setAnalyzingStatus("Precise API: Analyzing net monthly cash flows, recurring debits & salary credits...");
+      setAnalysisProgress(75);
+    }, 2400);
+    setTimeout(() => {
+      setAnalyzingStatus("Underwriting complete: Pre-approved microloan line sanctioned by SFB Partner!");
+      setAnalysisProgress(100);
+    }, 3800);
+    setTimeout(() => {
+      setStep(4);
+    }, 4500);
+  };
+
+  const handleApplyUpgrade = () => {
+    onUpgrade(upgradedTier);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4 animate-tab-enter">
+      <div className="bg-white rounded-3xl w-full max-w-sm sm:max-w-md shadow-2xl relative overflow-hidden border border-slate-100">
+        
+        {/* Top Header Bar */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/60 to-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-[#F47920] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              AA
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-xs sm:text-sm font-bold text-gray-900">Account Aggregator Rail</h3>
+                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                  RBI Licensed
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500">100% Consented • Zero Document Upload</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold transition cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Step Progression Bar */}
+        <div className="grid grid-cols-4 px-5 pt-3 gap-1">
+          {["Select Bank", "OTP Consent", "Analysis", "Limit Boost"].map((label, idx) => {
+            const stepNum = idx + 1;
+            const active = step === stepNum;
+            const done = step > stepNum;
+            return (
+              <div key={label} className="space-y-1">
+                <div
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    done ? "bg-emerald-500" : active ? "bg-[#F47920]" : "bg-gray-100"
+                  }`}
+                ></div>
+                <div className={`text-[9px] font-semibold truncate ${active ? "text-[#F47920]" : "text-gray-400"}`}>
+                  {label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* STEP 1: Select Bank */}
+        {step === 1 && (
+          <div className="p-5 space-y-4 animate-tab-enter">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Select Bank for Instant Underwriting</h4>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Account Aggregators analyze bank statements digitally to issue credit lines even without a credit card.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {banks.map((b) => (
+                <div
+                  key={b.name}
+                  onClick={() => setSelectedBank(b.name)}
+                  className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition ${
+                    selectedBank === b.name
+                      ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920]"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl p-1 bg-white rounded-xl border border-gray-100 shadow-2xs">{b.logo}</span>
+                    <div>
+                      <div className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                        <span>{b.name}</span>
+                        {b.verified && (
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 rounded">
+                            Linked
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500">{b.sub}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      {b.score}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Current Limit vs Potential Limit Callout */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+              <div>
+                <span className="text-gray-400 text-[10px] block">Current Limit</span>
+                <span className="font-extrabold text-gray-700">{formatRupee(baseLimit)}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-emerald-700 text-[10px] font-bold block">Pre-Qualified Limit</span>
+                <span className="font-extrabold text-emerald-700 text-sm">{formatRupee(upgradedTier)}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setStep(2)}
+              className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs flex items-center justify-center gap-2"
+            >
+              <span>Continue with {selectedBank}</span>
+              <span>→</span>
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2: AA Consent & Mobile OTP Simulation */}
+        {step === 2 && (
+          <div className="p-5 space-y-4 animate-tab-enter">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Authorize AA Data Consent</h4>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Confirm digital consent via one-time OTP sent to your Aadhaar-linked mobile (••• 4321).
+              </p>
+            </div>
+
+            {/* RBI AA Consent Spec Box */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-gray-500">Financial Information Provider:</span>
+                <span className="font-bold text-gray-900">{selectedBank}</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-gray-500">Consented Entities:</span>
+                <span className="font-bold text-gray-900">FlexiPay & Partner SFB</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-gray-500">Data Scope:</span>
+                <span className="font-semibold text-gray-900">12 Months Statements & Balance</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-gray-500">Consent Validity:</span>
+                <span className="font-bold text-emerald-700">One-Time Fetch (Revocable)</span>
+              </div>
+            </div>
+
+            {/* Simulated OTP Box */}
+            <div className="space-y-1.5 text-center">
+              <label className="text-[11px] font-semibold text-gray-600 block">
+                Enter 4-Digit Consent Verification OTP
+              </label>
+              <div className="flex justify-center gap-2.5">
+                {otp.map((d, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    maxLength={1}
+                    value={d}
+                    readOnly
+                    className="w-11 h-11 text-center font-extrabold text-base border-2 border-orange-200 bg-orange-50/50 rounded-xl text-gray-900 outline-none"
+                  />
+                ))}
+              </div>
+              <span className="text-[10px] text-emerald-600 font-semibold">
+                ✓ Auto-detected OTP from SMS
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-[10px] text-gray-500">
+              <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+              <span>Encrypted via 256-bit TLS 1.3. Banking credentials are never requested.</span>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setStep(1)}
+                className="flex-1 py-3 text-xs font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleStartAnalysis}
+                className="flex-2 py-3 bg-[#F47920] hover:bg-[#E06710] text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs"
+              >
+                Approve & Run Analysis
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Automated Underwriting with Dynamic Metrics */}
+        {step === 3 && (
+          <div className="p-6 text-center space-y-4 animate-tab-enter">
+            <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full border-4 border-orange-100 border-t-[#F47920] animate-spin"></div>
+              <div className="absolute font-black text-xs text-[#F47920]">{analysisProgress}%</div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Precise Statement Underwriting</h4>
+              <p className="text-xs text-[#F47920] font-semibold mt-1 min-h-[36px] px-2">
+                {analyzingStatus}
+              </p>
+            </div>
+
+            {/* Live Financial Metrics Feed */}
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-left text-[11px] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Avg Monthly Inflow:</span>
+                <span className="font-bold text-gray-900">₹62,400</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Zero-Bounce Track Record:</span>
+                <span className="font-bold text-emerald-700">100% Clean</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">UPI Velocity Discipline:</span>
+                <span className="font-bold text-blue-700">Top 10% Tier</span>
+              </div>
+            </div>
+
+            <div className="text-[10px] text-gray-400">
+              Powered by Precise API & Small Finance Bank Credit Rails
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: Approved & Limit Boosted */}
+        {step === 4 && (
+          <div className="p-5 text-center space-y-4 animate-tab-enter">
+            <div className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-md">
+              <Check size={32} strokeWidth={3} />
+            </div>
+
+            <div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider">
+                Underwriting Complete
+              </span>
+              <h4 className="text-base sm:text-lg font-black text-gray-900 mt-2">
+                Credit Line Increased to {formatRupee(upgradedTier)}!
+              </h4>
+              <p className="text-xs text-gray-500 mt-1">
+                Verified from your {selectedBank} cash flow records. Microloan limit ready for instant Scan & Pay.
+              </p>
+            </div>
+
+            {/* Upgraded Comparison Card */}
+            <div className="p-4 rounded-2xl bg-orange-50/70 border border-orange-200 text-left text-xs space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Previous Credit Limit:</span>
+                <span className="font-semibold text-gray-500 line-through">{formatRupee(baseLimit)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-900 font-bold">New Sanctioned Limit:</span>
+                <span className="font-black text-emerald-700 text-base">{formatRupee(upgradedTier)}</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-xl">
+                <span>Immediate Limit Boost:</span>
+                <span className="font-black">+{formatRupee(incrementalGain)}</span>
+              </div>
+              <div className="flex justify-between border-t border-orange-200/80 pt-2 text-[11px]">
+                <span className="text-gray-600">Flexible Repayment:</span>
+                <span className="font-bold text-[#F47920]">45 Days (0% Interest)</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleApplyUpgrade}
+              className="w-full py-4 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-2xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+            >
+              <span>Activate {formatRupee(upgradedTier)} Limit Now</span>
+              <span>⚡</span>
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
