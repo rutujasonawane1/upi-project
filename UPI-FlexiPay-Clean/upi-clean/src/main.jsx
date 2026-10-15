@@ -860,7 +860,27 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
     return null;
   });
 
-  const handleScanFromPos = () => {
+  const [detectStatus, setDetectStatus] = useState("");
+
+  const handleScanFromPos = async () => {
+    setDetectStatus("Scanning POS...");
+    // 1. Try fetching live from relay server (cross-port bridge)
+    try {
+      const res = await fetch("http://localhost:4000/api/bill");
+      const data = await res.json();
+      if (data && data.bill && data.bill.amount) {
+        setAmount(Number(data.bill.amount));
+        setMerchant(data.bill.merchant || "Sharma Super Store");
+        setVpa(data.bill.vpa || "sharma@flexipay");
+        setDetectStatus(`✓ Linked POS Bill: ₹${data.bill.amount}`);
+        setTimeout(() => setDetectStatus(""), 3500);
+        return;
+      }
+    } catch (e) {
+      console.warn("Relay bill fetch:", e);
+    }
+
+    // 2. Fallback to localStorage / defaults
     try {
       const saved = localStorage.getItem("flexiPosBill");
       if (saved) {
@@ -869,17 +889,18 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
           setAmount(Number(bill.amount));
           setMerchant(bill.merchant || "Sharma Super Store");
           setVpa(bill.vpa || "sharma@flexipay");
-          setScannedBill(bill);
+          setDetectStatus(`✓ Linked POS Bill: ₹${bill.amount}`);
+          setTimeout(() => setDetectStatus(""), 3500);
           return;
         }
       }
-    } catch (e) {
-      console.warn("Scan error:", e);
-    }
-    // Fallback if no bill currently in storage
+    } catch (err) {}
+
     setAmount(2500);
     setMerchant("Sharma Super Store");
     setVpa("sharma@flexipay");
+    setDetectStatus("✓ Linked Default Sharma Bill: ₹2,500");
+    setTimeout(() => setDetectStatus(""), 3500);
   };
 
   return (
@@ -890,7 +911,7 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
       </div>
 
       {/* Clean Scanner Box with Live Detect */}
-      <div className="w-60 p-4 mx-auto rounded-2xl border-2 border-dashed border-[#F47920] flex flex-col items-center justify-center bg-orange-50/30 text-gray-600 space-y-2">
+      <div className="w-64 p-4 mx-auto rounded-2xl border-2 border-dashed border-[#F47920] flex flex-col items-center justify-center bg-orange-50/30 text-gray-600 space-y-2">
         <div className="w-14 h-14 rounded-full bg-orange-100 text-[#F47920] flex items-center justify-center">
           <Scan size={32} />
         </div>
@@ -903,6 +924,11 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
         >
           ⚡ Auto-Detect POS Bill
         </button>
+        {detectStatus && (
+          <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full animate-tab-enter">
+            {detectStatus}
+          </div>
+        )}
       </div>
 
       {/* Select Demo Store */}

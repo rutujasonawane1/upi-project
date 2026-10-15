@@ -327,7 +327,7 @@ function App() {
     setQrGenerated(true);
     setPaid(false);
 
-    // Broadcast generated bill to Consumer App
+    // Broadcast generated bill to Consumer App (via Relay Server + localStorage + BroadcastChannel)
     const billPayload = {
       amount: Number(amount),
       merchant: "Sharma Super Store",
@@ -336,11 +336,19 @@ function App() {
       timestamp: Date.now()
     };
     try {
+      fetch("http://localhost:4000/api/bill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(billPayload)
+      }).catch(() => {});
+
       localStorage.setItem("flexiPosBill", JSON.stringify(billPayload));
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
         const bc = new BroadcastChannel("flexipay_bus");
         bc.postMessage({ type: "POS_BILL_GENERATED", payload: billPayload });
-        setTimeout(() => bc.close(), 100);
+        setTimeout(() => {
+          try { bc.close(); } catch (e) {}
+        }, 1000);
       }
     } catch (e) {
       console.warn("Bill broadcast error:", e);
