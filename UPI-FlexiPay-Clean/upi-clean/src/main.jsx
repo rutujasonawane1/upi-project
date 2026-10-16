@@ -153,68 +153,7 @@ function normalizeTx(tx) {
   };
 }
 
-const INITIAL_TRANSACTIONS = [
-  {
-    id: "tx_101",
-    merchant: "Sharma Super Store",
-    upiId: "sharma@flexipay",
-    initials: "SS",
-    amount: 2500,
-    date: "Today, 7:32 PM",
-    mode: "Buy Now, Pay Later",
-    utr: "429108420192",
-    status: "Completed",
-    rewardEarned: 25
-  },
-  {
-    id: "tx_102",
-    merchant: "Zepto Groceries",
-    upiId: "zepto@icici",
-    initials: "ZG",
-    amount: 840,
-    date: "Today, 3:15 PM",
-    mode: "Buy Now, Pay Later",
-    utr: "429108119284",
-    status: "Completed",
-    rewardEarned: 10
-  },
-  {
-    id: "tx_103",
-    merchant: "Swiggy",
-    upiId: "swiggy@axisbank",
-    initials: "SW",
-    amount: 420,
-    date: "Yesterday, 8:45 PM",
-    mode: "HDFC Bank •••• 4812",
-    utr: "429091824712",
-    status: "Completed",
-    rewardEarned: 5
-  },
-  {
-    id: "tx_104",
-    merchant: "Apollo Pharmacy",
-    upiId: "apollopharmacy@hdfcbank",
-    initials: "AP",
-    amount: 610,
-    date: "13 Oct 2026",
-    mode: "Buy Now, Pay Later",
-    utr: "428910492819",
-    status: "Completed",
-    rewardEarned: 8
-  },
-  {
-    id: "tx_105",
-    merchant: "Croma Retail",
-    upiId: "croma@kotak",
-    initials: "CR",
-    amount: 4200,
-    date: "08 Oct 2026",
-    mode: "Buy Now, Pay Later",
-    utr: "428201948210",
-    status: "Completed",
-    rewardEarned: 50
-  }
-].map(normalizeTx);
+const INITIAL_TRANSACTIONS = [];
 
 function formatRupee(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -245,19 +184,24 @@ function App() {
     return isNaN(num) ? 2450 : num;
   });
 
+  const [currentUser, setCurrentUser] = useState(getInitialUser);
+
   const [transactions, setTransactions] = useState(() => {
     try {
-      const saved = localStorage.getItem("flexiTx");
+      const user = getInitialUser();
+      if (!user) return [];
+      const userKey = `flexiTx_${user.id}`;
+      const saved = localStorage.getItem(userKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed.map(normalizeTx).filter(Boolean);
         }
       }
     } catch (e) {
       console.warn("Resetting flexiTx cache:", e);
     }
-    return INITIAL_TRANSACTIONS;
+    return [];
   });
 
   // Active Flow State
@@ -270,15 +214,18 @@ function App() {
   const [aaModal, setAaModal] = useState(false);
   const [showCloudSettings, setShowCloudSettings] = useState(false);
   const [cloudActive, setCloudActive] = useState(isFirebaseActive());
-  const [currentUser, setCurrentUser] = useState(getInitialUser);
 
   const handleLogout = () => {
     try {
+      if (currentUser && currentUser.id) {
+        localStorage.removeItem(`flexiTx_${currentUser.id}`);
+      }
       localStorage.removeItem("flexipay_user_session");
       localStorage.removeItem("flexiCredit");
       localStorage.removeItem("flexiCreditLimit");
       localStorage.removeItem("flexiTx");
     } catch (e) {}
+    setTransactions([]);
     setCurrentUser(null);
     navigate("/");
   };
@@ -414,11 +361,15 @@ function App() {
     try {
       localStorage.setItem("flexiCredit", String(credit));
       localStorage.setItem("flexiPoints", String(points));
-      localStorage.setItem("flexiTx", JSON.stringify(transactions));
+      if (currentUser && currentUser.id) {
+        localStorage.setItem(`flexiTx_${currentUser.id}`, JSON.stringify(transactions));
+      } else {
+        localStorage.setItem("flexiTx", JSON.stringify(transactions));
+      }
     } catch (e) {
       console.error("Storage save failed:", e);
     }
-  }, [credit, points, transactions]);
+  }, [credit, points, transactions, currentUser]);
 
   // Execute payment & Broadcast to Merchant App
   const handlePay = () => {
@@ -545,6 +496,9 @@ function App() {
             localStorage.setItem("flexipay_user_session", JSON.stringify(newProfile));
             setCreditLimit(newProfile.creditLimit || 60000);
             setCredit(newProfile.availableCredit || 60000);
+            setTransactions([]);
+            localStorage.setItem(`flexiTx_${newProfile.id}`, JSON.stringify([]));
+            localStorage.removeItem("flexiTx");
           } catch (e) {}
         }}
       />
@@ -967,36 +921,54 @@ function HomeView({ credit, creditLimit, transactions, points, activeOffer, navi
           </button>
         </div>
 
-        <div className="divide-y divide-gray-100">
-          {(transactions || []).slice(0, 4).map((tx) => (
-            <div
-              key={tx.id}
-              onClick={() => onSelectTx(tx)}
-              className="py-3.5 flex items-center justify-between cursor-pointer hover:bg-gray-50/60 -mx-2 px-2 rounded-xl transition"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">
-                  {tx.initials || "TX"}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-gray-900 leading-tight">
-                    {tx.merchant}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">{tx.date}</div>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className="text-sm font-bold text-gray-900">
-                  -{formatRupee(tx.amount)}
-                </div>
-                <div className="text-[11px] text-gray-500 mt-0.5">
-                  {(tx.mode || "").includes("Later") ? "Pay Later" : "Bank UPI"}
-                </div>
-              </div>
+        {(!transactions || transactions.length === 0) ? (
+          <div className="p-5 text-center rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 my-2">
+            <div className="w-10 h-10 rounded-full bg-orange-50 text-[#F47920] flex items-center justify-center mx-auto mb-2 text-sm font-bold shadow-xs">
+              ⚡
             </div>
-          ))}
-        </div>
+            <div className="text-xs font-bold text-gray-800">No Transactions Yet</div>
+            <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs mx-auto">
+              Scan any merchant UPI QR to make your first payment using your 0% interest FlexiPay line!
+            </p>
+            <button
+              onClick={() => navigate("/scan")}
+              className="mt-3 px-4 py-2 bg-[#F47920] hover:bg-[#E06710] text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+            >
+              Scan &amp; Pay Now →
+            </button>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {transactions.slice(0, 4).map((tx) => (
+              <div
+                key={tx.id}
+                onClick={() => onSelectTx(tx)}
+                className="py-3.5 flex items-center justify-between cursor-pointer hover:bg-gray-50/60 -mx-2 px-2 rounded-xl transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">
+                    {tx.initials || "TX"}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 leading-tight">
+                      {tx.merchant}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">{tx.date}</div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-sm font-bold text-gray-900">
+                    -{formatRupee(tx.amount)}
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-0.5">
+                    {(tx.mode || "").includes("Later") ? "Pay Later" : "Bank UPI"}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1809,36 +1781,46 @@ function HistoryView({ transactions, onSelectTx }) {
         ))}
       </div>
 
-      <div className="divide-y divide-gray-100">
-        {filtered.map((tx) => (
-          <div
-            key={tx.id}
-            onClick={() => onSelectTx(tx)}
-            className="py-3.5 flex items-center justify-between cursor-pointer hover:bg-gray-50/60 -mx-2 px-2 rounded-xl transition"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">
-                {tx.initials || "TX"}
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-gray-900 leading-tight">
-                  {tx.merchant}
+      {filtered.length === 0 ? (
+        <div className="py-12 text-center text-gray-400 space-y-2">
+          <History size={36} className="mx-auto text-gray-300 stroke-1" />
+          <p className="text-sm font-semibold text-gray-700">No Transactions Found</p>
+          <p className="text-xs text-gray-400 max-w-xs mx-auto">
+            {search ? "Try searching for a different store name or amount" : "Transactions made from this device will appear here once you make your first payment."}
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {filtered.map((tx) => (
+            <div
+              key={tx.id}
+              onClick={() => onSelectTx(tx)}
+              className="py-3.5 flex items-center justify-between cursor-pointer hover:bg-gray-50/60 -mx-2 px-2 rounded-xl transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">
+                  {tx.initials || "TX"}
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">{tx.date}</div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-900 leading-tight">
+                    {tx.merchant}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">{tx.date}</div>
+                </div>
               </div>
-            </div>
 
-            <div className="text-right">
-              <div className="text-sm font-bold text-gray-900">
-                -{formatRupee(tx.amount)}
-              </div>
-              <div className="text-[11px] text-gray-500 mt-0.5">
-                {(tx.mode || "").includes("Later") ? "Pay Later" : "Bank UPI"}
+              <div className="text-right">
+                <div className="text-sm font-bold text-gray-900">
+                  -{formatRupee(tx.amount)}
+                </div>
+                <div className="text-[11px] text-gray-500 mt-0.5">
+                  {(tx.mode || "").includes("Later") ? "Pay Later" : "Bank UPI"}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
