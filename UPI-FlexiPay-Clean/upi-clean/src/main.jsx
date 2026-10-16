@@ -37,6 +37,33 @@ import { QRCodeCanvas } from "qrcode.react";
 import "./index.css";
 import { syncSubscribeBill, syncPublishPayment, syncSubscribeOffer, isFirebaseActive } from "./firebaseSync";
 import FirebaseSettingsModal from "./FirebaseSettingsModal";
+import UserSwitchModal, { PRESET_USERS } from "./UserSwitchModal";
+
+function getInitialUser() {
+  if (typeof window !== "undefined") {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlUser = params.get("user");
+      if (urlUser) {
+        const found = PRESET_USERS.find(u => u.id === urlUser.toLowerCase());
+        if (found) return found;
+        return {
+          id: urlUser.toLowerCase(),
+          name: urlUser,
+          fullName: urlUser,
+          vpa: `${urlUser.toLowerCase()}@flexipay`,
+          phone: "+91 98201 00000",
+          initials: urlUser.slice(0, 2).toUpperCase(),
+          avatarBg: "bg-teal-700",
+          defaultLimit: 50000
+        };
+      }
+      const saved = localStorage.getItem("flexiActiveUser");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return PRESET_USERS[0]; // Default to Umesh
+}
 
 // ----------------------------------------------------
 // ERROR BOUNDARY (Zero Blank Screen Guarantee)
@@ -230,6 +257,19 @@ function App() {
   const [aaModal, setAaModal] = useState(false);
   const [showCloudSettings, setShowCloudSettings] = useState(false);
   const [cloudActive, setCloudActive] = useState(isFirebaseActive());
+  const [currentUser, setCurrentUser] = useState(getInitialUser);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+
+  const handleSelectUser = (newUser) => {
+    setCurrentUser(newUser);
+    try {
+      localStorage.setItem("flexiActiveUser", JSON.stringify(newUser));
+      const savedLimit = localStorage.getItem(`flexiCreditLimit_${newUser.id}`);
+      const effectiveLimit = savedLimit ? Number(savedLimit) : newUser.defaultLimit;
+      setCreditLimit(effectiveLimit);
+      setCredit(effectiveLimit);
+    } catch (e) {}
+  };
 
   // Upgrade credit limit via Account Aggregator simulation
   const handleAaUpgrade = (newLimit) => {
@@ -407,8 +447,8 @@ function App() {
     try {
       const syncPayload = {
         amount: Number(amount),
-        customer: "Rutuja Sonawane",
-        upiId: "rutuja@flexipay",
+        customer: currentUser.fullName,
+        upiId: currentUser.vpa,
         mode: modeText,
         utr: newTx.utr,
         timestamp: Date.now()
@@ -490,13 +530,25 @@ function App() {
         {/* Simple Minimal Top Bar */}
         <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-20">
           {location.pathname === "/" ? (
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#002855] text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                R
+            <div
+              onClick={() => setUserModalOpen(true)}
+              className="flex items-center gap-2.5 cursor-pointer p-1 -m-1 rounded-2xl hover:bg-slate-50 transition group"
+              title="Click to Switch User Profile"
+            >
+              <div className="relative">
+                <div className={`w-9 h-9 rounded-full ${currentUser.avatarBg} text-white flex items-center justify-center font-bold text-sm shadow-xs`}>
+                  {currentUser.initials}
+                </div>
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 border border-white text-white flex items-center justify-center text-[9px] font-black">
+                  ⇄
+                </span>
               </div>
               <div>
-                <div className="text-sm font-bold text-gray-900">Rutuja Sonawane</div>
-                <div className="text-xs text-gray-500">rutuja@flexipay</div>
+                <div className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                  <span>{currentUser.fullName}</span>
+                  <span className="text-[10px] text-slate-400 group-hover:text-[#F47920] transition">▼</span>
+                </div>
+                <div className="text-xs text-gray-500">{currentUser.vpa}</div>
               </div>
             </div>
           ) : (
@@ -593,7 +645,7 @@ function App() {
             />
           )}
 
-          {location.pathname === "/qr" && <MyQrView />}
+          {location.pathname === "/qr" && <MyQrView currentUser={currentUser} />}
 
           {location.pathname === "/rewards" && (
             <RewardsView points={points} setPoints={setPoints} />
@@ -608,6 +660,8 @@ function App() {
 
           {location.pathname === "/profile" && (
             <ProfileView
+              currentUser={currentUser}
+              onSwitchProfile={() => setUserModalOpen(true)}
               credit={credit}
               creditLimit={creditLimit}
               points={points}
@@ -726,6 +780,14 @@ function App() {
             setShowCloudSettings(false);
             setCloudActive(isFirebaseActive());
           }}
+        />
+
+        {/* Multi-User Profile Switcher Modal */}
+        <UserSwitchModal
+          isOpen={userModalOpen}
+          onClose={() => setUserModalOpen(false)}
+          currentUser={currentUser}
+          onSelectUser={handleSelectUser}
         />
 
       </div>
@@ -1527,16 +1589,23 @@ function RewardsView({ points, setPoints }) {
 // ----------------------------------------------------
 // PROFILE & BANK ACCOUNTS VIEW
 // ----------------------------------------------------
-function ProfileView({ credit, creditLimit, points, onRepayClick, onOpenAaModal }) {
+function ProfileView({ currentUser, onSwitchProfile, credit, creditLimit, points, onRepayClick, onOpenAaModal }) {
+  const user = currentUser || { fullName: "Rutuja Sonawane", vpa: "rutuja@flexipay", phone: "+91 98765 43210", initials: "R", avatarBg: "bg-[#002855]" };
   return (
     <div className="space-y-6">
       {/* User Header */}
-      <div className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs text-center">
-        <div className="w-16 h-16 rounded-full bg-[#002855] text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs">
-          R
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs text-center relative">
+        <button
+          onClick={onSwitchProfile}
+          className="absolute right-3.5 top-3.5 text-[10px] font-extrabold text-[#F47920] bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full hover:bg-orange-100 transition cursor-pointer"
+        >
+          Switch User ⇄
+        </button>
+        <div className={`w-16 h-16 rounded-full ${user.avatarBg} text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs`}>
+          {user.initials}
         </div>
-        <h2 className="text-base font-bold text-gray-900 mt-3">Rutuja Sonawane</h2>
-        <div className="text-xs text-gray-500 font-mono">rutuja@flexipay • +91 98765 43210</div>
+        <h2 className="text-base font-bold text-gray-900 mt-3">{user.fullName}</h2>
+        <div className="text-xs text-gray-500 font-mono">{user.vpa} • {user.phone}</div>
         <div className="text-xs text-emerald-700 font-semibold mt-2 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-full">
           <ShieldCheck size={14} /> Full KYC Verified
         </div>
@@ -1636,16 +1705,17 @@ function ProfileView({ credit, creditLimit, points, onRepayClick, onOpenAaModal 
 // ----------------------------------------------------
 // MY QR VIEW
 // ----------------------------------------------------
-function MyQrView() {
+function MyQrView({ currentUser }) {
+  const user = currentUser || { fullName: "Rutuja Sonawane", vpa: "rutuja@flexipay" };
   return (
     <div className="pt-4 text-center space-y-4">
       <h2 className="text-lg font-bold text-gray-900">My UPI QR</h2>
-      <p className="text-xs text-gray-500">Scan using any UPI app to pay Rutuja Sonawane directly</p>
+      <p className="text-xs text-gray-500">Scan using any UPI app to pay {user.fullName} directly</p>
 
       <div className="p-6 rounded-2xl border border-gray-200 bg-white inline-block shadow-sm">
-        <QRCodeCanvas value="upi://pay?pa=rutuja@flexipay&pn=Rutuja%20Sonawane" size={200} />
-        <div className="mt-4 text-sm font-bold text-gray-900">Rutuja Sonawane</div>
-        <div className="text-xs text-gray-500 font-mono">rutuja@flexipay</div>
+        <QRCodeCanvas value={`upi://pay?pa=${user.vpa}&pn=${encodeURIComponent(user.fullName)}`} size={200} />
+        <div className="mt-4 text-sm font-bold text-gray-900">{user.fullName}</div>
+        <div className="text-xs text-gray-500 font-mono">{user.vpa}</div>
       </div>
     </div>
   );
