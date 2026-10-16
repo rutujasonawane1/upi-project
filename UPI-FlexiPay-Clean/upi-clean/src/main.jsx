@@ -39,6 +39,8 @@ import "./index.css";
 import { syncSubscribeBill, syncPublishPayment, syncSubscribeOffer, isFirebaseActive } from "./firebaseSync";
 import FirebaseSettingsModal from "./FirebaseSettingsModal";
 import OnboardingFlow from "./OnboardingFlow";
+import RealQrScanner from "./RealQrScanner";
+import UpiPinScreen from "./UpiPinScreen";
 
 function getInitialUser() {
   if (typeof window !== "undefined") {
@@ -1050,26 +1052,18 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
         <p className="text-xs text-gray-500">Scan any store QR code to pay using FlexiPay</p>
       </div>
 
-      {/* Clean Scanner Box with Live Detect */}
-      <div className="w-64 p-4 mx-auto rounded-2xl border-2 border-dashed border-[#F47920] flex flex-col items-center justify-center bg-orange-50/30 text-gray-600 space-y-2">
-        <div className="w-14 h-14 rounded-full bg-orange-100 text-[#F47920] flex items-center justify-center">
-          <Scan size={32} />
-        </div>
-        <span className="text-xs text-gray-700 font-semibold text-center">
-          Point at Sharma Store POS QR
-        </span>
-        <button
-          onClick={handleScanFromPos}
-          className="px-3.5 py-1.5 text-xs font-bold bg-[#F47920] text-white rounded-lg hover:bg-[#E06710] shadow-xs transition cursor-pointer"
-        >
-          ⚡ Auto-Detect POS Bill
-        </button>
-        {detectStatus && (
-          <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full animate-tab-enter">
-            {detectStatus}
-          </div>
-        )}
-      </div>
+      {/* Live Camera QR Scanner with jsQR and Real-Time UPI URI Parser */}
+      <RealQrScanner
+        onScanSuccess={(data) => {
+          if (data.merchant) setMerchant(data.merchant);
+          if (data.vpa) setVpa(data.vpa);
+          if (data.amount && Number(data.amount) > 0) {
+            setAmount(Number(data.amount));
+          }
+          navigate("/pay");
+        }}
+        onFallbackSelect={handleScanFromPos}
+      />
 
       {/* Select Demo Store */}
       <div>
@@ -1268,6 +1262,7 @@ function KfsModal({ amount, credit, onClose, onAccept }) {
 function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }) {
   const isEligible = credit >= amount;
   const [showKfs, setShowKfs] = useState(false);
+  const [showPinScreen, setShowPinScreen] = useState(false);
 
   return (
     <div className="space-y-6 pt-2">
@@ -1403,7 +1398,7 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
       )}
 
       <button
-        onClick={onPay}
+        onClick={() => setShowPinScreen(true)}
         disabled={method === "later" && !isEligible}
         className="w-full py-4 bg-[#F47920] hover:bg-[#E06710] text-white font-semibold rounded-xl text-base shadow-sm transition disabled:opacity-50 cursor-pointer"
       >
@@ -1413,6 +1408,21 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
           ? `Pay ${formatRupee(amount)} via SBI UPI`
           : `Pay ${formatRupee(amount)} via HDFC UPI`}
       </button>
+
+      {/* Authentic NPCI UPI PIN Screen */}
+      {showPinScreen && (
+        <UpiPinScreen
+          amount={amount}
+          merchant={merchant}
+          vpa={vpa}
+          method={method}
+          onSuccess={() => {
+            setShowPinScreen(false);
+            onPay();
+          }}
+          onCancel={() => setShowPinScreen(false)}
+        />
+      )}
 
       {/* Key Fact Statement Modal */}
       {showKfs && (
