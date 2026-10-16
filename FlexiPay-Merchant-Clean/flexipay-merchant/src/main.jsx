@@ -135,7 +135,14 @@ function App() {
   const [sales, setSales] = useState(18450);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [soundboxEnabled, setSoundboxEnabled] = useState(true);
-  const [voiceLang, setVoiceLang] = useState("hi-IN"); // "hi-IN" | "en-IN"
+  const [voiceLang, setVoiceLang] = useState("hi-standard"); // "hi-standard" (default) | "hi-ab" | "en-IN"
+  const cycleVoice = () => {
+    setVoiceLang((prev) => {
+      if (prev === "hi-standard") return "hi-ab";
+      if (prev === "hi-ab") return "en-IN";
+      return "hi-standard";
+    });
+  };
   const [copiedVpa, setCopiedVpa] = useState(false);
   const [settledToast, setSettledToast] = useState(false);
   const [liveSyncToast, setLiveSyncToast] = useState(null);
@@ -212,69 +219,79 @@ function App() {
     }
   };
 
-  const announceSoundbox = (amt, forcedLang) => {
+  const announceSoundbox = (amt, forcedMode) => {
     console.log("[Soundbox] Announcing payment received:", amt);
     playChime();
 
     if (!soundboxEnabled) return;
-    const lang = forcedLang || voiceLang;
+    const mode = forcedMode || voiceLang;
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
         const allVoices = window.speechSynthesis.getVoices();
 
-        if (lang === "hi-IN") {
-          // Amitabh Bachchan Voice Persona & Tuning
-          // Prefer deep male Hindi voices (Hemant, Rishi, Madhur, Male)
-          const maleHindiVoice = allVoices.find(
-            (v) =>
-              v.lang.toLowerCase().startsWith("hi") &&
-              (v.name.toLowerCase().includes("male") ||
-                v.name.toLowerCase().includes("hemant") ||
-                v.name.toLowerCase().includes("rishi") ||
-                v.name.toLowerCase().includes("madhur") ||
-                v.name.toLowerCase().includes("deep"))
-          );
-          const anyHindiVoice = allVoices.find((v) => v.lang.toLowerCase().startsWith("hi"));
-          const indianMaleVoice = allVoices.find(
-            (v) => v.lang.toUpperCase().includes("IN") && v.name.toLowerCase().includes("male")
-          );
-          const indianVoice = allVoices.find((v) => v.lang.toUpperCase().includes("IN"));
+        const maleHindiVoice = allVoices.find(
+          (v) =>
+            v.lang.toLowerCase().startsWith("hi") &&
+            (v.name.toLowerCase().includes("male") ||
+              v.name.toLowerCase().includes("hemant") ||
+              v.name.toLowerCase().includes("rishi") ||
+              v.name.toLowerCase().includes("madhur") ||
+              v.name.toLowerCase().includes("deep"))
+        );
+        const anyHindiVoice = allVoices.find((v) => v.lang.toLowerCase().startsWith("hi"));
+        const indianMaleVoice = allVoices.find(
+          (v) => v.lang.toUpperCase().includes("IN") && v.name.toLowerCase().includes("male")
+        );
+        const indianVoice = allVoices.find((v) => v.lang.toUpperCase().includes("IN"));
 
-          const chosenVoice = maleHindiVoice || anyHindiVoice || indianMaleVoice || indianVoice;
-          const isDevanagari = chosenVoice && chosenVoice.lang.toLowerCase().startsWith("hi");
+        const chosenVoice = maleHindiVoice || anyHindiVoice || indianMaleVoice || indianVoice;
+        const isDevanagari = chosenVoice && chosenVoice.lang.toLowerCase().startsWith("hi");
 
-          // Exact requested script: "Deviyo aur sajjano, FlexiPay par N rupaye prapt huye"
-          const text = isDevanagari
+        let text = "";
+        let pitch = 1.0;
+        let rate = 0.95;
+        let lang = "hi-IN";
+
+        if (mode === "hi-standard") {
+          // 1. Previous Standard Hindi Soundbox (DEFAULT)
+          text = isDevanagari
+            ? `FlexiPay पर ${amt} रुपये प्राप्त हुए.`
+            : `FlexiPay par ${amt} rupaye prapt hue.`;
+          pitch = 1.0;
+          rate = 0.95;
+          lang = chosenVoice ? chosenVoice.lang : "hi-IN";
+        } else if (mode === "hi-ab") {
+          // 2. Amitabh Bachchan Style Script (Simulated Tribute)
+          text = isDevanagari
             ? `देवियों और सज्जनों, FlexiPay पर ${amt} रुपये प्राप्त हुए!`
             : `Deviyo aur sajjano, FlexiPay par ${amt} rupaye prapt huye!`;
-
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = chosenVoice ? chosenVoice.lang : "hi-IN";
-          if (chosenVoice) {
-            utterance.voice = chosenVoice;
-          }
-
-          // Signature Amitabh Bachchan Baritone: Deep pitch, poised & dramatic cadence
-          utterance.pitch = 0.65;
-          utterance.rate = 0.85;
-          utterance.volume = 1.0;
-
-          utterance.onerror = (e) => console.warn("[Soundbox speech error]", e);
-          window.speechSynthesis.speak(utterance);
+          pitch = 0.65;
+          rate = 0.85;
+          lang = chosenVoice ? chosenVoice.lang : "hi-IN";
         } else {
-          // Standard English Soundbox
-          const text = `Received ${amt} rupees on FlexiPay.`;
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 0.95;
-          utterance.pitch = 1.0;
-          utterance.lang = "en-IN";
+          // 3. English Soundbox
+          text = `Received ${amt} rupees on FlexiPay.`;
+          pitch = 1.0;
+          rate = 0.95;
+          lang = "en-IN";
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        if (chosenVoice && (mode === "hi-standard" || mode === "hi-ab")) {
+          utterance.voice = chosenVoice;
+        } else if (mode === "en-IN") {
           const engVoice = allVoices.find((v) => v.lang.includes("IN") || v.lang.startsWith("en"));
           if (engVoice) utterance.voice = engVoice;
-          utterance.onerror = (e) => console.warn("[Soundbox speech error]", e);
-          window.speechSynthesis.speak(utterance);
         }
+        utterance.pitch = pitch;
+        utterance.rate = rate;
+        utterance.volume = 1.0;
+
+        utterance.onerror = (e) => console.warn("[Soundbox speech error]", e);
+        window.speechSynthesis.speak(utterance);
       } catch (err) {
         console.warn("Speech synthesis error:", err);
       }
@@ -567,15 +584,21 @@ function App() {
               {soundboxEnabled && (
                 <>
                   <button
-                    onClick={() => setVoiceLang((v) => (v === "hi-IN" ? "en-IN" : "hi-IN"))}
+                    onClick={cycleVoice}
                     className={`px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold rounded-md transition cursor-pointer flex items-center gap-1 ${
-                      voiceLang === "hi-IN"
+                      voiceLang === "hi-standard"
+                        ? "bg-orange-100 text-[#F47920] border border-orange-300 shadow-2xs"
+                        : voiceLang === "hi-ab"
                         ? "bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs"
                         : "text-slate-600 hover:bg-slate-200/60"
                     }`}
-                    title="Toggle Amitabh Bachchan Hindi Voice / English Voice"
+                    title="Switch voice: Standard Hindi (Default), AB Hindi (Simulated), English"
                   >
-                    {voiceLang === "hi-IN" ? "🎙️ AB (हिंदी)" : "🇬🇧 EN"}
+                    {voiceLang === "hi-standard"
+                      ? "🗣️ हिंदी (Standard)"
+                      : voiceLang === "hi-ab"
+                      ? "🎙️ AB (हिंदी)"
+                      : "🇬🇧 English"}
                   </button>
                   <button
                     onClick={() => announceSoundbox(amount || 2500)}
@@ -967,11 +990,20 @@ function App() {
                   <div className="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl text-left flex items-center justify-between gap-2 max-w-sm mx-auto w-full">
                     <div className="min-w-0">
                       <div className="text-[11px] font-bold text-amber-950 flex items-center gap-1">
-                        <span>🎙️</span>
-                        <span>Soundbox: {voiceLang === "hi-IN" ? "Amitabh Bachchan Voice" : "English Voice"}</span>
+                        <span>{voiceLang === "hi-ab" ? "🎙️" : "🔊"}</span>
+                        <span>
+                          Soundbox:{" "}
+                          {voiceLang === "hi-standard"
+                            ? "Standard Hindi (Default)"
+                            : voiceLang === "hi-ab"
+                            ? "AB Hindi (Simulated)"
+                            : "English"}
+                        </span>
                       </div>
                       <div className="text-[10px] text-amber-800 truncate font-medium">
-                        {voiceLang === "hi-IN"
+                        {voiceLang === "hi-standard"
+                          ? `"FlexiPay पर ₹${Number(amount || 0).toLocaleString("en-IN")} रुपये प्राप्त हुए."`
+                          : voiceLang === "hi-ab"
                           ? `"देवियों और सज्जनों, FlexiPay पर ₹${Number(amount || 0).toLocaleString("en-IN")} रुपये प्राप्त हुए!"`
                           : `"Received ₹${Number(amount || 0).toLocaleString("en-IN")} on FlexiPay."`}
                       </div>

@@ -169,15 +169,32 @@ function App() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  const [currentUser, setCurrentUser] = useState(getInitialUser);
+
   const [creditLimit, setCreditLimit] = useState(() => {
+    const user = getInitialUser();
+    if (user && user.id) {
+      const userLimit = localStorage.getItem(`flexiCreditLimit_${user.id}`);
+      if (userLimit && Number(userLimit) > 0) return Number(userLimit);
+      if (user.creditLimit) return Number(user.creditLimit);
+    }
     const saved = localStorage.getItem("flexiCreditLimit");
     const num = Number(saved);
-    return isNaN(num) || num <= 0 ? 25000 : num;
+    return isNaN(num) || num <= 0 ? 60000 : num;
   });
+
   const [credit, setCredit] = useState(() => {
+    const user = getInitialUser();
+    if (user && user.id) {
+      const userCredit = localStorage.getItem(`flexiCredit_${user.id}`);
+      if (userCredit !== null && !isNaN(Number(userCredit)) && Number(userCredit) >= 0) {
+        return Number(userCredit);
+      }
+      if (user.availableCredit !== undefined) return Number(user.availableCredit);
+    }
     const saved = localStorage.getItem("flexiCredit");
     const num = Number(saved);
-    return isNaN(num) || num <= 0 ? 22500 : num;
+    return isNaN(num) || num <= 0 ? 60000 : num;
   });
 
   const [points, setPoints] = useState(() => {
@@ -185,8 +202,6 @@ function App() {
     const num = Number(saved);
     return isNaN(num) ? 2450 : num;
   });
-
-  const [currentUser, setCurrentUser] = useState(getInitialUser);
 
   const [transactions, setTransactions] = useState(() => {
     try {
@@ -221,6 +236,8 @@ function App() {
     try {
       if (currentUser && currentUser.id) {
         localStorage.removeItem(`flexiTx_${currentUser.id}`);
+        localStorage.removeItem(`flexiCredit_${currentUser.id}`);
+        localStorage.removeItem(`flexiCreditLimit_${currentUser.id}`);
       }
       localStorage.removeItem("flexipay_user_session");
       localStorage.removeItem("flexiCredit");
@@ -362,8 +379,11 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem("flexiCredit", String(credit));
+      localStorage.setItem("flexiCreditLimit", String(creditLimit));
       localStorage.setItem("flexiPoints", String(points));
       if (currentUser && currentUser.id) {
+        localStorage.setItem(`flexiCredit_${currentUser.id}`, String(credit));
+        localStorage.setItem(`flexiCreditLimit_${currentUser.id}`, String(creditLimit));
         localStorage.setItem(`flexiTx_${currentUser.id}`, JSON.stringify(transactions));
       } else {
         localStorage.setItem("flexiTx", JSON.stringify(transactions));
@@ -371,13 +391,15 @@ function App() {
     } catch (e) {
       console.error("Storage save failed:", e);
     }
-  }, [credit, points, transactions, currentUser]);
+  }, [credit, creditLimit, points, transactions, currentUser]);
 
   // Execute payment & Broadcast to Merchant App
   const handlePay = () => {
     let modeText = "Buy Now, Pay Later";
     if (method === "hdfc") modeText = "HDFC Bank •••• 4812";
     if (method === "sbi") modeText = "SBI •••• 8912";
+
+    const numericAmt = Number(amount || 0);
 
     const rawTx = {
       id: "tx_" + Date.now(),
@@ -389,7 +411,7 @@ function App() {
         .join("")
         .slice(0, 2)
         .toUpperCase(),
-      amount: amount,
+      amount: numericAmt,
       date: "Just now",
       mode: modeText,
       utr: String(Math.floor(400000000000 + Math.random() * 900000000000)),
@@ -400,7 +422,7 @@ function App() {
     const newTx = normalizeTx(rawTx);
 
     if (method === "later") {
-      setCredit((c) => Math.max(0, c - amount));
+      setCredit((c) => Math.max(0, c - numericAmt));
       setPoints((p) => p + 25);
     } else {
       setPoints((p) => p + 5);
@@ -411,7 +433,7 @@ function App() {
     // Broadcast payment completion to Merchant App (via Relay Server + BroadcastChannel)
     try {
       const syncPayload = {
-        amount: Number(amount),
+        amount: numericAmt,
         customer: currentUser ? currentUser.fullName : "Customer",
         upiId: currentUser ? currentUser.vpa : "customer@flexipay",
         mode: modeText,
@@ -456,7 +478,7 @@ function App() {
 
   // Repay dues
   const handleRepay = (payAmt, payMode) => {
-    const due = creditLimit - credit;
+    const due = Math.max(0, creditLimit - credit);
     const settleAmt = payAmt ? Math.min(due, Math.max(1, Number(payAmt))) : due;
     if (settleAmt <= 0) return;
     setCredit((c) => Math.min(creditLimit, c + settleAmt));
@@ -690,9 +712,12 @@ function App() {
         {/* 45-Day Repayment Modal with Timeline Visualizer & Multi-Method Options */}
         {repayModal && (
           <ConsumerRepayModal
-            dueAmount={creditLimit - credit}
+            dueAmount={Math.max(0, creditLimit - credit)}
             onClose={() => setRepayModal(false)}
-            onConfirm={(amt, method) => handleRepay(amt, method)}
+            onConfirm={(amt, method) => {
+              handleRepay(amt, method);
+              setRepayModal(false);
+            }}
           />
         )}
 
@@ -1011,11 +1036,15 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
       const res = await fetch("http://localhost:4000/api/bill");
       const data = await res.json();
       if (data && data.bill && data.bill.amount) {
-        setAmount(Number(data.bill.amount));
+        const parsedAmt = Number(data.bill.amount);
+        setAmount(parsedAmt);
         setMerchant(data.bill.merchant || "Sharma Super Store");
         setVpa(data.bill.vpa || "sharma@flexipay");
-        setDetectStatus(`✓ Linked POS Bill: ₹${data.bill.amount}`);
-        setTimeout(() => setDetectStatus(""), 3500);
+        setDetectStatus(`✓ Linked POS Bill: ₹${parsedAmt}`);
+        setTimeout(() => {
+          setDetectStatus("");
+          navigate("/pay");
+        }, 700);
         return;
       }
     } catch (e) {
@@ -1028,11 +1057,15 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
       if (saved) {
         const bill = JSON.parse(saved);
         if (bill && bill.amount) {
-          setAmount(Number(bill.amount));
+          const parsedAmt = Number(bill.amount);
+          setAmount(parsedAmt);
           setMerchant(bill.merchant || "Sharma Super Store");
           setVpa(bill.vpa || "sharma@flexipay");
-          setDetectStatus(`✓ Linked POS Bill: ₹${bill.amount}`);
-          setTimeout(() => setDetectStatus(""), 3500);
+          setDetectStatus(`✓ Linked POS Bill: ₹${parsedAmt}`);
+          setTimeout(() => {
+            setDetectStatus("");
+            navigate("/pay");
+          }, 700);
           return;
         }
       }
@@ -1042,7 +1075,10 @@ function ScanView({ amount, setAmount, merchant, setMerchant, setVpa, navigate }
     setMerchant("Sharma Super Store");
     setVpa("sharma@flexipay");
     setDetectStatus("✓ Linked Default Sharma Bill: ₹2,500");
-    setTimeout(() => setDetectStatus(""), 3500);
+    setTimeout(() => {
+      setDetectStatus("");
+      navigate("/pay");
+    }, 700);
   };
 
   return (
@@ -2374,7 +2410,11 @@ function ConsumerRepayModal({ dueAmount, onClose, onConfirm }) {
             amount={payAmt}
             sender={method === "sbi" ? "State Bank of India" : "HDFC Bank"}
             accent="orange"
-            onSuccess={() => setStep(4)}
+            onSuccess={() => {
+              const bankLabel = method === "sbi" ? "SBI •••• 8912" : "HDFC Bank •••• 4812";
+              onConfirm(payAmt, bankLabel);
+              setStep(4);
+            }}
             onBack={() => setStep(2)}
             submitLabel={`Authorize Payment of ${formatRupee(payAmt)}`}
           />
@@ -2402,7 +2442,7 @@ function ConsumerRepayModal({ dueAmount, onClose, onConfirm }) {
             </div>
 
             <button
-              onClick={handleFinalDone}
+              onClick={onClose}
               className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md"
             >
               Done (View Statement)
