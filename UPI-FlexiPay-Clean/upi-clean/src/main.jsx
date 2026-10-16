@@ -407,8 +407,8 @@ function App() {
     try {
       const syncPayload = {
         amount: Number(amount),
-        customer: "Rahul Sharma",
-        upiId: "rahul@flexipay",
+        customer: "Rutuja Sonawane",
+        upiId: "rutuja@flexipay",
         mode: modeText,
         utr: newTx.utr,
         timestamp: Date.now()
@@ -495,8 +495,8 @@ function App() {
                 R
               </div>
               <div>
-                <div className="text-sm font-bold text-gray-900">Rahul Sharma</div>
-                <div className="text-xs text-gray-500">rahul@flexipay</div>
+                <div className="text-sm font-bold text-gray-900">Rutuja Sonawane</div>
+                <div className="text-xs text-gray-500">rutuja@flexipay</div>
               </div>
             </div>
           ) : (
@@ -1535,8 +1535,8 @@ function ProfileView({ credit, creditLimit, points, onRepayClick, onOpenAaModal 
         <div className="w-16 h-16 rounded-full bg-[#002855] text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs">
           R
         </div>
-        <h2 className="text-base font-bold text-gray-900 mt-3">Rahul Sharma</h2>
-        <div className="text-xs text-gray-500 font-mono">rahul@flexipay • +91 98765 43210</div>
+        <h2 className="text-base font-bold text-gray-900 mt-3">Rutuja Sonawane</h2>
+        <div className="text-xs text-gray-500 font-mono">rutuja@flexipay • +91 98765 43210</div>
         <div className="text-xs text-emerald-700 font-semibold mt-2 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-full">
           <ShieldCheck size={14} /> Full KYC Verified
         </div>
@@ -1640,12 +1640,12 @@ function MyQrView() {
   return (
     <div className="pt-4 text-center space-y-4">
       <h2 className="text-lg font-bold text-gray-900">My UPI QR</h2>
-      <p className="text-xs text-gray-500">Scan using any UPI app to pay Rahul Sharma directly</p>
+      <p className="text-xs text-gray-500">Scan using any UPI app to pay Rutuja Sonawane directly</p>
 
       <div className="p-6 rounded-2xl border border-gray-200 bg-white inline-block shadow-sm">
-        <QRCodeCanvas value="upi://pay?pa=rahul@flexipay&pn=Rahul%20Sharma" size={200} />
-        <div className="mt-4 text-sm font-bold text-gray-900">Rahul Sharma</div>
-        <div className="text-xs text-gray-500 font-mono">rahul@flexipay</div>
+        <QRCodeCanvas value="upi://pay?pa=rutuja@flexipay&pn=Rutuja%20Sonawane" size={200} />
+        <div className="mt-4 text-sm font-bold text-gray-900">Rutuja Sonawane</div>
+        <div className="text-xs text-gray-500 font-mono">rutuja@flexipay</div>
       </div>
     </div>
   );

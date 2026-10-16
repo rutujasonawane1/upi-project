@@ -56,8 +56,8 @@ import FirebaseSettingsModal from "./FirebaseSettingsModal";
 const INITIAL_TRANSACTIONS = [
   {
     id: "ord_1092",
-    customer: "Rahul Sharma",
-    upiId: "rahul@flexipay",
+    customer: "Rutuja Sonawane",
+    upiId: "rutuja@flexipay",
     initials: "RS",
     amount: 2500,
     type: "Buy Now, Pay Later",
@@ -226,7 +226,7 @@ function App() {
       if (!payload || payload.amount === undefined || payload.amount === null) return;
       const amt = Number(payload.amount);
       const mode = payload.mode || "Buy Now, Pay Later";
-      const custName = payload.customer || "Rahul Sharma";
+      const custName = payload.customer || "Rutuja Sonawane";
 
       setSales((prev) => prev + amt);
       setLastPaidMode(mode);
@@ -235,7 +235,7 @@ function App() {
       const newTx = {
         id: "ord_" + (payload.timestamp || Date.now()),
         customer: custName,
-        upiId: payload.upiId || "rahul@flexipay",
+        upiId: payload.upiId || "rutuja@flexipay",
         initials: "RS",
         amount: amt,
         type: mode,
@@ -398,7 +398,7 @@ function App() {
     const newTx = {
       id: "ord_" + Date.now(),
       customer: customer || "Walk-in Customer",
-      upiId: mode.includes("Later") ? "rahul@flexipay" : "customer@okaxis",
+      upiId: mode.includes("Later") ? "rutuja@flexipay" : "customer@okaxis",
       initials,
       amount: val,
       type: mode,
