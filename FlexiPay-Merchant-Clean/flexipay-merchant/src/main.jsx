@@ -431,7 +431,7 @@ function App() {
           
           {/* Store Branding (Mobile-Optimized) */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
               S
             </div>
             <div className="min-w-0">
@@ -447,7 +447,7 @@ function App() {
               <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate mt-0.5">
                 <button
                   onClick={handleCopyVpa}
-                  className="font-mono text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer shrink-0"
+                  className="font-mono text-[#F47920] hover:text-[#E06710] flex items-center gap-0.5 cursor-pointer shrink-0"
                   title="Click to copy UPI ID"
                 >
                   <span>sharma@flexipay</span>
@@ -466,9 +466,9 @@ function App() {
             <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 gap-1">
               <button
                 onClick={() => setSoundboxEnabled((prev) => !prev)}
-                className={`p-1.5 sm:px-2 sm:py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1 ${
+                className={`p-1.5 sm:px-2 sm:py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1 cursor-pointer ${
                   soundboxEnabled
-                    ? "bg-blue-600 text-white shadow-xs"
+                    ? "bg-[#F47920] text-white shadow-xs"
                     : "bg-transparent text-slate-400"
                 }`}
                 title="Toggle Soundbox Speaker"
@@ -481,14 +481,14 @@ function App() {
                 <>
                   <button
                     onClick={() => setVoiceLang((v) => (v === "hi-IN" ? "en-IN" : "hi-IN"))}
-                    className="px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold text-slate-600 hover:bg-slate-200/60 rounded-md transition"
+                    className="px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold text-slate-600 hover:bg-slate-200/60 rounded-md transition cursor-pointer"
                     title="Toggle voice language"
                   >
                     {voiceLang === "hi-IN" ? "HI" : "EN"}
                   </button>
                   <button
                     onClick={() => announceSoundbox(2500)}
-                    className="hidden sm:inline-block px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50 rounded-md transition"
+                    className="hidden sm:inline-block px-2 py-1 text-[11px] font-semibold text-[#F47920] hover:bg-orange-50 rounded-md transition cursor-pointer"
                     title="Test Voice Announcement"
                   >
                     🔊 Test
@@ -517,9 +517,9 @@ function App() {
               <button
                 key={item.id}
                 onClick={() => setTab(item.id)}
-                className={`py-3 px-3.5 font-medium transition border-b-2 -mb-[1px] whitespace-nowrap flex items-center gap-2 ${
+                className={`py-3 px-3.5 font-medium transition border-b-2 -mb-[1px] whitespace-nowrap flex items-center gap-2 cursor-pointer ${
                   active
-                    ? "border-blue-600 text-blue-600 font-semibold"
+                    ? "border-[#F47920] text-[#F47920] font-bold"
                     : "border-transparent text-slate-500 hover:text-slate-900"
                 }`}
               >
@@ -545,11 +545,11 @@ function App() {
                 setTab(item.id);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition ${
-                active ? "text-blue-600 font-bold" : "text-slate-400 hover:text-slate-700"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition cursor-pointer ${
+                active ? "text-[#F47920] font-bold" : "text-slate-400 hover:text-slate-700"
               }`}
             >
-              <Icon size={20} className={active ? "text-blue-600 stroke-[2.4]" : "text-slate-400"} />
+              <Icon size={20} className={active ? "text-[#F47920] stroke-[2.4]" : "text-slate-400"} />
               <span className="text-[10px] mt-0.5">{item.label.split(" ")[0]}</span>
             </button>
           );
@@ -586,7 +586,7 @@ function App() {
             {/* Toggle Button [ ^ ] / [ v ] as in user reference */}
             <button
               onClick={() => setSummaryExpanded((prev) => !prev)}
-              className="px-2 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition flex items-center gap-1 shrink-0 text-xs font-bold cursor-pointer"
+              className="px-2 py-1.5 rounded-lg bg-orange-50 text-[#F47920] hover:bg-orange-100 border border-orange-200 transition flex items-center gap-1 shrink-0 text-xs font-bold cursor-pointer"
               title={summaryExpanded ? "Collapse Overview Cards" : "Expand Overview Cards"}
             >
               <span className="text-[11px] hidden sm:inline">{summaryExpanded ? "Hide Stats" : "Show Stats"}</span>
@@ -598,7 +598,7 @@ function App() {
           {summaryExpanded && (
             <div className="mt-3 pt-3 border-t border-slate-100 space-y-3 animate-tab-enter">
               {/* Instant Settlement Bar */}
-              <div className="p-2.5 sm:p-3 rounded-xl bg-blue-50/80 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-orange-50/80 border border-orange-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
                   <span className="text-xs text-slate-700">
@@ -607,7 +607,7 @@ function App() {
                 </div>
                 <button
                   onClick={handleInstantSettle}
-                  className="self-stretch sm:self-auto text-center px-3 py-1.5 text-xs font-bold bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100/50 transition cursor-pointer"
+                  className="self-stretch sm:self-auto text-center px-3 py-1.5 text-xs font-bold bg-white border border-orange-200 text-[#F47920] rounded-lg hover:bg-orange-100/50 transition cursor-pointer"
                 >
                   Settle to Bank Now (Free)
                 </button>
@@ -697,7 +697,7 @@ function App() {
                   <h2 className="text-sm sm:text-base font-bold text-slate-900">New Store Bill</h2>
                   <p className="text-[10px] sm:text-xs text-slate-500">Dynamic UPI QR with Voice Alert</p>
                 </div>
-                <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 bg-blue-50 text-blue-700 rounded-lg">
+                <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 bg-orange-50 text-[#F47920] rounded-lg">
                   Counter #01
                 </span>
               </div>
@@ -707,7 +707,7 @@ function App() {
                 <label className="text-[11px] sm:text-xs font-semibold text-slate-600 block mb-1">
                   Enter Bill Amount (₹)
                 </label>
-                <div className="flex items-center border-2 border-slate-200 rounded-xl px-3.5 py-1.5 sm:py-2 focus-within:border-blue-600 transition bg-slate-50/50">
+                <div className="flex items-center border-2 border-slate-200 rounded-xl px-3.5 py-1.5 sm:py-2 focus-within:border-[#F47920] transition bg-slate-50/50">
                   <span className="text-lg sm:text-2xl font-extrabold text-slate-400 mr-2">₹</span>
                   <input
                     type="number"
@@ -734,9 +734,9 @@ function App() {
                         setQrGenerated(false);
                         setPaid(false);
                       }}
-                      className={`py-1.5 sm:py-2 text-xs font-bold rounded-xl border transition ${
+                      className={`py-1.5 sm:py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
                         Number(amount) === preset
-                          ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                          ? "bg-[#F47920] text-white border-[#F47920] shadow-xs"
                           : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
                       }`}
                     >
@@ -751,7 +751,7 @@ function App() {
                 <button
                   onClick={handleGenerate}
                   disabled={!amount || Number(amount) <= 0}
-                  className="flex-1 py-2.5 sm:py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2.5 sm:py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <QrCode size={16} />
                   Generate Payment QR ({formatRupee(Number(amount))})
@@ -771,7 +771,7 @@ function App() {
               <div className="pt-1 border-t border-slate-100">
                 <button
                   onClick={() => setShowDetails(!showDetails)}
-                  className="w-full text-left text-[11px] font-semibold text-blue-600 hover:text-blue-700 flex items-center justify-between cursor-pointer py-1"
+                  className="w-full text-left text-[11px] font-semibold text-[#F47920] hover:text-[#E06710] flex items-center justify-between cursor-pointer py-1"
                 >
                   <span>{showDetails ? "▲ Hide Combos & Customer Note" : "▼ + Add Store Combos or Customer Note"}</span>
                   <span className="text-[10px] text-slate-400 font-normal">Optional</span>
@@ -794,9 +794,9 @@ function App() {
                               setQrGenerated(false);
                               setPaid(false);
                             }}
-                            className="p-1.5 text-left rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/30 transition group"
+                            className="p-1.5 text-left rounded-xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50/30 transition group cursor-pointer"
                           >
-                            <div className="text-[10px] font-semibold text-slate-800 truncate group-hover:text-blue-700">
+                            <div className="text-[10px] font-semibold text-slate-800 truncate group-hover:text-[#F47920]">
                               {item.name}
                             </div>
                             <div className="text-xs font-extrabold text-slate-900 mt-0.5">
@@ -813,14 +813,14 @@ function App() {
                         type="text"
                         value={customer}
                         onChange={(e) => setCustomer(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-600"
+                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-[#F47920]"
                         placeholder="Customer Name (Optional)"
                       />
                       <input
                         type="tel"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-600"
+                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-[#F47920]"
                         placeholder="Customer Mobile (Optional)"
                       />
                     </div>
@@ -861,7 +861,7 @@ function App() {
                     <div className="space-y-2 pt-1 w-full max-w-sm mx-auto">
                       <button
                         onClick={() => handleSimulatePayment("Buy Now, Pay Later")}
-                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                        className="w-full py-2.5 bg-[#F47920] hover:bg-[#E06710] text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
                       >
                         <Sparkles size={14} /> Simulate Customer Paying via BNPL
                       </button>
@@ -1007,7 +1007,7 @@ function App() {
             className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-tab-enter"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-blue-600 -mx-6 -mt-6 p-4 rounded-t-3xl text-white">
+            <div className="bg-[#F47920] -mx-6 -mt-6 p-4 rounded-t-3xl text-white">
               <div className="text-[11px] font-bold uppercase tracking-wider opacity-90">Scan to Pay</div>
               <div className="text-xl font-black mt-0.5">Sharma Super Store</div>
             </div>
@@ -1036,7 +1036,7 @@ function App() {
               <span className="px-1.5 py-0.5 bg-slate-100 rounded">GPay</span>
               <span className="px-1.5 py-0.5 bg-slate-100 rounded">PhonePe</span>
               <span className="px-1.5 py-0.5 bg-slate-100 rounded">Paytm</span>
-              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-bold">FlexiPay</span>
+              <span className="px-1.5 py-0.5 bg-orange-50 text-[#F47920] rounded font-bold border border-orange-200">FlexiPay</span>
             </div>
           </div>
         </div>,
@@ -1095,7 +1095,7 @@ function App() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Payment Mode</span>
-                <span className={`font-semibold ${selectedReceipt.type.includes("Later") ? "text-purple-700" : "text-blue-700"}`}>
+                <span className={`font-semibold ${selectedReceipt.type.includes("Later") ? "text-purple-700" : "text-[#F47920]"}`}>
                   {selectedReceipt.type}
                 </span>
               </div>
@@ -1176,7 +1176,7 @@ function TransactionsTab({ transactions, onSelectReceipt }) {
             placeholder="Search customer, UTR..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-600 w-full"
+            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-[#F47920] w-full"
           />
         </div>
       </div>
@@ -1194,7 +1194,7 @@ function TransactionsTab({ transactions, onSelectReceipt }) {
               onClick={() => setFilterMode(f.id)}
               className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
                 filterMode === f.id
-                  ? "bg-white text-blue-700 shadow-xs border border-slate-200"
+                  ? "bg-white text-[#F47920] shadow-xs border border-slate-200"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -1205,7 +1205,7 @@ function TransactionsTab({ transactions, onSelectReceipt }) {
 
         <button
           onClick={() => alert("Statement exported for FY 2026-27")}
-          className="text-blue-600 text-[11px] font-semibold hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+          className="text-[#F47920] text-[11px] font-semibold hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
         >
           <Download size={12} /> Export CSV
         </button>
@@ -1232,7 +1232,7 @@ function TransactionsTab({ transactions, onSelectReceipt }) {
                     className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-semibold ${
                       tx.type.includes("Later")
                         ? "bg-purple-50 text-purple-700 border border-purple-100"
-                        : "bg-blue-50 text-blue-700 border border-blue-100"
+                        : "bg-orange-50 text-[#F47920] border border-orange-100"
                     }`}
                   >
                     {tx.type}
@@ -1284,7 +1284,7 @@ function TransactionsTab({ transactions, onSelectReceipt }) {
                     className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
                       tx.type.includes("Later")
                         ? "bg-purple-50 text-purple-700 border border-purple-200"
-                        : "bg-blue-50 text-blue-700 border border-blue-200"
+                        : "bg-orange-50 text-[#F47920] border border-orange-200"
                     }`}
                   >
                     {tx.type}
@@ -1301,7 +1301,7 @@ function TransactionsTab({ transactions, onSelectReceipt }) {
                   </span>
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <span className="text-blue-600 font-semibold hover:underline">View Slip →</span>
+                  <span className="text-[#F47920] font-semibold hover:underline">View Slip →</span>
                 </td>
               </tr>
             ))}
@@ -1371,7 +1371,7 @@ function OffersTab({ offer, setOffer }) {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600"
+            className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl outline-none focus:border-[#F47920]"
           />
         </div>
 
@@ -1384,7 +1384,7 @@ function OffersTab({ offer, setOffer }) {
               type="number"
               value={minSpend}
               onChange={(e) => setMinSpend(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600"
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl outline-none focus:border-[#F47920]"
             />
           </div>
           <div>
@@ -1395,27 +1395,27 @@ function OffersTab({ offer, setOffer }) {
               type="number"
               value={cashbackCap}
               onChange={(e) => setCashbackCap(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600"
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-200 rounded-xl outline-none focus:border-[#F47920]"
             />
           </div>
         </div>
 
         <button
           onClick={handleSave}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-xs"
+          className="w-full py-3 bg-[#F47920] hover:bg-[#E06710] text-white font-bold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-xs"
         >
           {saved ? "✓ Campaign Updated Successfully" : "Update Store Offer"}
         </button>
       </div>
 
       {/* Live Consumer App Simulation Preview */}
-      <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200 text-xs space-y-2">
-        <span className="text-[10px] sm:text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1">
+      <div className="p-3.5 rounded-xl bg-orange-50/60 border border-orange-200 text-xs space-y-2">
+        <span className="text-[10px] sm:text-[11px] font-bold text-[#F47920] uppercase tracking-wider flex items-center gap-1">
           <Sparkles size={12} /> Live Preview on FlexiPay Consumer App
         </span>
-        <div className="bg-white p-3 rounded-lg border border-blue-100 flex items-center justify-between gap-2">
+        <div className="bg-white p-3 rounded-lg border border-orange-100 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#F47920] text-white flex items-center justify-center font-bold text-xs shrink-0">
               %
             </div>
             <div className="min-w-0">
@@ -1425,7 +1425,7 @@ function OffersTab({ offer, setOffer }) {
               </div>
             </div>
           </div>
-          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded shrink-0">
+          <span className="text-[10px] font-bold text-[#F47920] bg-orange-50 px-2 py-1 rounded shrink-0">
             Applied
           </span>
         </div>
@@ -1445,7 +1445,7 @@ function StandeeTab({ onOpenDisplay }) {
       <div className="bg-white rounded-3xl border-2 border-slate-200 p-5 sm:p-6 shadow-xl relative overflow-hidden">
         
         {/* Top Standee Header Banner */}
-        <div className="bg-blue-600 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 p-4 text-white mb-5">
+        <div className="bg-[#F47920] -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 p-4 text-white mb-5">
           <div className="text-[10px] sm:text-xs font-bold tracking-wider uppercase opacity-90">Accepted Here</div>
           <div className="text-base sm:text-lg font-black tracking-tight mt-0.5">UPI • Buy Now, Pay Later</div>
         </div>
@@ -1470,7 +1470,7 @@ function StandeeTab({ onOpenDisplay }) {
           <span className="px-2 py-0.5 bg-slate-50 rounded border border-slate-200">PhonePe</span>
           <span className="px-2 py-0.5 bg-slate-50 rounded border border-slate-200">Paytm</span>
           <span className="px-2 py-0.5 bg-slate-50 rounded border border-slate-200">BHIM</span>
-          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200 font-bold">FlexiPay</span>
+          <span className="px-2 py-0.5 bg-orange-50 text-[#F47920] rounded border border-orange-200 font-bold">FlexiPay</span>
         </div>
       </div>
 
@@ -1478,7 +1478,7 @@ function StandeeTab({ onOpenDisplay }) {
       <div className="flex flex-col sm:flex-row gap-2 justify-center">
         <button
           onClick={onOpenDisplay}
-          className="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full sm:w-auto px-4 py-2.5 bg-[#F47920] hover:bg-[#E06710] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <Smartphone size={15} /> Use Phone as Live Standee
         </button>
@@ -1532,14 +1532,14 @@ function AnalyticsTab({ transactions, sales }) {
 
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-blue-700">UPI Direct</span>
+                <span className="text-[#F47920]">UPI Direct</span>
                 <span className="text-slate-900">
                   {formatRupee(upiSales)} ({Math.round((upiSales / Math.max(1, sales)) * 100)}%)
                 </span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 rounded-full"
+                  className="h-full bg-[#F47920] rounded-full"
                   style={{ width: `${(upiSales / Math.max(1, sales)) * 100}%` }}
                 ></div>
               </div>
@@ -1716,23 +1716,19 @@ function AuthenticOtpVerification({
   const accentBtnClass =
     accent === "emerald"
       ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-      : accent === "orange"
-      ? "bg-[#F47920] hover:bg-[#E06710] text-white"
-      : "bg-blue-600 hover:bg-blue-700 text-white";
+      : "bg-[#F47920] hover:bg-[#E06710] text-white";
 
   const accentBorderClass =
     accent === "emerald"
       ? "focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-      : accent === "orange"
-      ? "focus:border-[#F47920] focus:ring-1 focus:ring-[#F47920]"
-      : "focus:border-blue-600 focus:ring-1 focus:ring-blue-600";
+      : "focus:border-[#F47920] focus:ring-1 focus:ring-[#F47920]";
 
   return (
     <div className="space-y-4 flex-1 text-center py-1 animate-tab-enter">
       {/* Authentic Incoming Mobile SMS Push Notification Banner */}
       {showSmsPush && (
         <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl flex items-start gap-2.5 border border-slate-700 text-left animate-tab-enter">
-          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+          <div className="w-8 h-8 rounded-full bg-[#F47920] text-white flex items-center justify-center shrink-0 mt-0.5">
             <MessageSquare size={16} />
           </div>
           <div className="flex-1 min-w-0">
@@ -1746,7 +1742,7 @@ function AuthenticOtpVerification({
             <button
               type="button"
               onClick={handleAutoFill}
-              className="mt-2 text-[10px] font-extrabold text-blue-400 hover:text-blue-300 bg-blue-500/20 px-2.5 py-1 rounded-md border border-blue-400/30 inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+              className="mt-2 text-[10px] font-extrabold text-[#F47920] hover:text-orange-300 bg-orange-500/20 px-2.5 py-1 rounded-md border border-orange-400/30 inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition"
             >
               <Smartphone size={11} />
               <span>Tap to Auto-Fill ({generatedOtp})</span>
@@ -1804,7 +1800,7 @@ function AuthenticOtpVerification({
           <button
             type="button"
             onClick={handleResend}
-            className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+            className="text-xs font-bold text-[#F47920] hover:underline cursor-pointer"
           >
             Resend OTP via SMS
           </button>
@@ -1897,7 +1893,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
         <div className="border-b border-slate-100 pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+              <div className="w-8 h-8 rounded-xl bg-[#F47920] text-white flex items-center justify-center shadow-xs">
                 <Banknote size={18} />
               </div>
               <div>
@@ -1936,7 +1932,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
               <div
                 key={s.num}
                 className={`h-1.5 rounded-full transition-all ${
-                  step >= s.num ? "bg-blue-600" : "bg-slate-100"
+                  step >= s.num ? "bg-[#F47920]" : "bg-slate-100"
                 }`}
               />
             ))}
@@ -1950,7 +1946,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 Available Line: {formatRupee(availableCredit)}
               </span>
-              <div className="flex items-center justify-center border-2 border-slate-200 rounded-2xl p-3 focus-within:border-blue-600 transition bg-slate-50/50">
+              <div className="flex items-center justify-center border-2 border-slate-200 rounded-2xl p-3 focus-within:border-[#F47920] transition bg-slate-50/50">
                 <span className="text-3xl font-black text-slate-400 mr-2">₹</span>
                 <input
                   type="number"
@@ -1971,7 +1967,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
                   onClick={() => setAmount(Math.min(availableCredit, preset))}
                   className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
                     amount === preset
-                      ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                      ? "bg-[#F47920] text-white border-[#F47920] shadow-xs"
                       : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                   }`}
                 >
@@ -1983,8 +1979,8 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
                 onClick={() => setAmount(availableCredit)}
                 className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
                   amount === availableCredit
-                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                    : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                    ? "bg-[#F47920] text-white border-[#F47920] shadow-xs"
+                    : "bg-orange-50 text-[#F47920] border-orange-200 hover:bg-orange-100"
                 }`}
               >
                 Max Line
@@ -2008,12 +2004,12 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
                       onClick={() => setTenureDays(plan.days)}
                       className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
                         tenureDays === plan.days
-                          ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600"
+                          ? "border-[#F47920] bg-orange-50/70 ring-1 ring-[#F47920]"
                           : "border-slate-200 bg-white hover:border-slate-300"
                       }`}
                     >
                       <div className="text-[11px] font-bold text-slate-900">{plan.title}</div>
-                      <div className="text-xs font-black text-blue-700 mt-0.5">{formatRupee(estEdi)}/d</div>
+                      <div className="text-xs font-black text-[#F47920] mt-0.5">{formatRupee(estEdi)}/d</div>
                       <div className="text-[9px] text-slate-500 mt-0.5">{plan.tag}</div>
                     </button>
                   );
@@ -2036,7 +2032,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
             <button
               onClick={() => setStep(2)}
               disabled={amount <= 0 || amount > availableCredit}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               <span>Review Key Fact Statement (KFS)</span>
               <ChevronRight size={16} />
@@ -2047,9 +2043,9 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
         {/* STEP 2: KEY FACT STATEMENT (KFS) CONSENT */}
         {step === 2 && (
           <div className="space-y-4 flex-1">
-            <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl text-[11px] text-blue-900 flex items-center justify-between">
+            <div className="p-2.5 bg-orange-50/70 border border-orange-200 rounded-xl text-[11px] text-orange-950 flex items-center justify-between">
               <span>Lender: <strong>Equitas Small Finance Bank Ltd.</strong></span>
-              <span className="font-mono text-[10px] text-blue-700">RBI/DLG/SFB/891</span>
+              <span className="font-mono text-[10px] text-[#F47920]">RBI/DLG/SFB/891</span>
             </div>
 
             {/* KFS Financial Disclosures Table */}
@@ -2064,7 +2060,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
               </div>
               <div className="p-2.5 flex justify-between">
                 <span className="text-slate-500">Daily EDI Deduction</span>
-                <span className="font-bold text-blue-700">{formatRupee(dailyEdi)} / day</span>
+                <span className="font-bold text-[#F47920]">{formatRupee(dailyEdi)} / day</span>
               </div>
               <div className="p-2.5 flex justify-between">
                 <span className="text-slate-500">Interest Rate (Reducing)</span>
@@ -2090,7 +2086,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
                 type="checkbox"
                 checked={kfsConsent}
                 onChange={(e) => setKfsConsent(e.target.checked)}
-                className="mt-0.5 accent-blue-600 shrink-0"
+                className="mt-0.5 accent-[#F47920] shrink-0"
               />
               <span className="text-slate-700 text-[11px] leading-relaxed">
                 I have read and agree to the <strong>Key Fact Statement (KFS)</strong> terms and authorize daily EDI holdback sweeps from QR settlements under RBI Digital Lending Guidelines.
@@ -2108,7 +2104,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
               <button
                 onClick={() => setStep(3)}
                 disabled={!kfsConsent}
-                className="w-2/3 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="w-2/3 py-3 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 <span>Accept & Request OTP</span>
                 <ChevronRight size={16} />
@@ -2125,7 +2121,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
             amount={amount}
             phone="+91 98*** **129"
             sender="Equitas SFB"
-            accent="blue"
+            accent="orange"
             onSuccess={() => setStep(4)}
             onBack={() => setStep(2)}
             submitLabel={`Verify & Disburse ${formatRupee(amount)}`}
@@ -2154,7 +2150,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Daily EDI Holdback:</span>
-                <span className="font-bold text-blue-700">{formatRupee(dailyEdi)} / day</span>
+                <span className="font-bold text-[#F47920]">{formatRupee(dailyEdi)} / day</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Repayment Period:</span>
@@ -2164,7 +2160,7 @@ function DrawCreditModal({ availableCredit, creditLimit, borrowed, onClose, onCo
 
             <button
               onClick={handleFinalDone}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md"
+              className="w-full py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md"
             >
               Done (Return to Store Credit)
             </button>
@@ -2307,7 +2303,7 @@ function RepayCreditModal({ borrowed, creditLimit, sales, onClose, onConfirm }) 
                   }`}
                 >
                   <div className="text-xs font-bold text-slate-900">Custom Partial</div>
-                  <div className="text-sm font-black text-blue-700 mt-0.5">{formatRupee(customAmount)}</div>
+                  <div className="text-sm font-black text-[#F47920] mt-0.5">{formatRupee(customAmount)}</div>
                 </button>
               </div>
 
@@ -2376,7 +2372,7 @@ function RepayCreditModal({ borrowed, creditLimit, sales, onClose, onConfirm }) 
                       <div className="text-[10px] text-slate-500">Balance: {formatRupee(sales)} available</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Instant Sweep</span>
+                  <span className="text-[10px] font-bold text-[#F47920] bg-orange-50 border border-orange-200 px-2 py-0.5 rounded">Instant Sweep</span>
                 </label>
               </div>
             </div>
@@ -2549,11 +2545,11 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
       )}
 
       {/* Main Hero Working Capital Card */}
-      <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white p-5 sm:p-7 rounded-3xl shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-white p-5 sm:p-7 rounded-3xl shadow-xl relative overflow-hidden border border-slate-800">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-orange-500/20 text-[#F47920] border border-orange-500/30">
                 Merchant Working Capital Line
               </span>
               <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
@@ -2564,7 +2560,7 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               {formatRupee(availableCredit)}
             </h2>
-            <p className="text-xs text-blue-200 max-w-md">
+            <p className="text-xs text-slate-300 max-w-md">
               Instant revolving credit for inventory & vendor payouts. Based on your daily UPI QR throughput and GSTR-3B filings.
             </p>
           </div>
@@ -2573,7 +2569,7 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
             <button
               onClick={() => setDrawModal(true)}
               disabled={availableCredit <= 0}
-              className="px-5 py-3.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              className="px-5 py-3.5 bg-[#F47920] hover:bg-[#E06710] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Banknote size={16} />
               <span>Draw to Bank Account</span>
@@ -2593,17 +2589,17 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
         {/* 3 Metric Stats along bottom */}
         <div className="mt-6 pt-5 border-t border-white/10 grid grid-cols-3 gap-2 text-center text-xs">
           <div>
-            <span className="text-[10px] text-blue-300 block">Total Sanctioned</span>
+            <span className="text-[10px] text-slate-400 block">Total Sanctioned</span>
             <span className="font-bold text-sm">{formatRupee(creditLimit)}</span>
           </div>
           <div>
-            <span className="text-[10px] text-blue-300 block">Daily Auto-Deduction (EDI)</span>
+            <span className="text-[10px] text-slate-400 block">Daily Auto-Deduction (EDI)</span>
             <span className="font-bold text-sm text-emerald-400">
               {borrowed > 0 ? "₹350 / day" : "₹0 (No active draw)"}
             </span>
           </div>
           <div>
-            <span className="text-[10px] text-blue-300 block">Interest Rate</span>
+            <span className="text-[10px] text-slate-400 block">Interest Rate</span>
             <span className="font-bold text-sm">0.99% / mo</span>
           </div>
         </div>
@@ -2639,7 +2635,7 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
                 <div className="font-bold text-slate-900">Daily QR Velocity</div>
                 <div className="text-[10px] text-slate-500">Today: {formatRupee(sales)} across {transactions.length} orders</div>
               </div>
-              <span className="text-blue-600 font-bold text-[11px]">Growing</span>
+              <span className="text-[#F47920] font-bold text-[11px]">Growing</span>
             </div>
 
             <div className="p-3 rounded-xl bg-purple-50 border border-purple-100 text-purple-900 text-[11px]">
@@ -2688,7 +2684,7 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
           </div>
 
           <div className="flex items-center gap-2 text-[11px] text-slate-400">
-            <ShieldCheck size={16} className="text-blue-600 shrink-0" />
+            <ShieldCheck size={16} className="text-[#F47920] shrink-0" />
             <span>Compliant with RBI Digital Lending Framework for MSMEs.</span>
           </div>
         </div>
