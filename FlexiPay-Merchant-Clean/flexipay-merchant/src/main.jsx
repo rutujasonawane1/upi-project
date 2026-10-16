@@ -159,6 +159,33 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [tab]);
 
+  // Pre-load Speech Synthesis Voices and unlock audio on initial user touch
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+    const unlockAudio = () => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          if (ctx.state === "suspended") ctx.resume();
+        }
+      } catch (e) {}
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+    };
+    window.addEventListener("click", unlockAudio, { once: true });
+    window.addEventListener("touchstart", unlockAudio, { once: true });
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+    };
+  }, []);
+
   // Soundbox Voice & Chime Announcement
   const playChime = () => {
     try {
@@ -191,19 +218,63 @@ function App() {
 
     if (!soundboxEnabled) return;
     const lang = forcedLang || voiceLang;
-    const text =
-      lang === "hi-IN"
-        ? `FlexiPay par ${amt} rupaye prapt hue.`
-        : `Received ${amt} rupees on FlexiPay.`;
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.lang = lang;
-        utterance.onerror = (e) => console.warn("[Soundbox speech error]", e);
-        window.speechSynthesis.speak(utterance);
+        const allVoices = window.speechSynthesis.getVoices();
+
+        if (lang === "hi-IN") {
+          // Amitabh Bachchan Voice Persona & Tuning
+          // Prefer deep male Hindi voices (Hemant, Rishi, Madhur, Male)
+          const maleHindiVoice = allVoices.find(
+            (v) =>
+              v.lang.toLowerCase().startsWith("hi") &&
+              (v.name.toLowerCase().includes("male") ||
+                v.name.toLowerCase().includes("hemant") ||
+                v.name.toLowerCase().includes("rishi") ||
+                v.name.toLowerCase().includes("madhur") ||
+                v.name.toLowerCase().includes("deep"))
+          );
+          const anyHindiVoice = allVoices.find((v) => v.lang.toLowerCase().startsWith("hi"));
+          const indianMaleVoice = allVoices.find(
+            (v) => v.lang.toUpperCase().includes("IN") && v.name.toLowerCase().includes("male")
+          );
+          const indianVoice = allVoices.find((v) => v.lang.toUpperCase().includes("IN"));
+
+          const chosenVoice = maleHindiVoice || anyHindiVoice || indianMaleVoice || indianVoice;
+          const isDevanagari = chosenVoice && chosenVoice.lang.toLowerCase().startsWith("hi");
+
+          // Exact requested script: "Deviyo aur sajjano, FlexiPay par N rupaye prapt huye"
+          const text = isDevanagari
+            ? `देवियों और सज्जनों, FlexiPay पर ${amt} रुपये प्राप्त हुए!`
+            : `Deviyo aur sajjano, FlexiPay par ${amt} rupaye prapt huye!`;
+
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = chosenVoice ? chosenVoice.lang : "hi-IN";
+          if (chosenVoice) {
+            utterance.voice = chosenVoice;
+          }
+
+          // Signature Amitabh Bachchan Baritone: Deep pitch, poised & dramatic cadence
+          utterance.pitch = 0.65;
+          utterance.rate = 0.85;
+          utterance.volume = 1.0;
+
+          utterance.onerror = (e) => console.warn("[Soundbox speech error]", e);
+          window.speechSynthesis.speak(utterance);
+        } else {
+          // Standard English Soundbox
+          const text = `Received ${amt} rupees on FlexiPay.`;
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 0.95;
+          utterance.pitch = 1.0;
+          utterance.lang = "en-IN";
+          const engVoice = allVoices.find((v) => v.lang.includes("IN") || v.lang.startsWith("en"));
+          if (engVoice) utterance.voice = engVoice;
+          utterance.onerror = (e) => console.warn("[Soundbox speech error]", e);
+          window.speechSynthesis.speak(utterance);
+        }
       } catch (err) {
         console.warn("Speech synthesis error:", err);
       }
@@ -497,17 +568,22 @@ function App() {
                 <>
                   <button
                     onClick={() => setVoiceLang((v) => (v === "hi-IN" ? "en-IN" : "hi-IN"))}
-                    className="px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold text-slate-600 hover:bg-slate-200/60 rounded-md transition cursor-pointer"
-                    title="Toggle voice language"
+                    className={`px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold rounded-md transition cursor-pointer flex items-center gap-1 ${
+                      voiceLang === "hi-IN"
+                        ? "bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs"
+                        : "text-slate-600 hover:bg-slate-200/60"
+                    }`}
+                    title="Toggle Amitabh Bachchan Hindi Voice / English Voice"
                   >
-                    {voiceLang === "hi-IN" ? "HI" : "EN"}
+                    {voiceLang === "hi-IN" ? "🎙️ AB (हिंदी)" : "🇬🇧 EN"}
                   </button>
                   <button
-                    onClick={() => announceSoundbox(2500)}
-                    className="hidden sm:inline-block px-2 py-1 text-[11px] font-semibold text-[#F47920] hover:bg-orange-50 rounded-md transition cursor-pointer"
+                    onClick={() => announceSoundbox(amount || 2500)}
+                    className="px-2 py-1 text-[11px] font-semibold text-[#F47920] hover:bg-orange-50 rounded-md transition cursor-pointer flex items-center gap-1"
                     title="Test Voice Announcement"
                   >
-                    🔊 Test
+                    <Volume2 size={13} />
+                    <span className="hidden sm:inline">Test</span>
                   </button>
                 </>
               )}
@@ -885,6 +961,30 @@ function App() {
                     <div className="text-xs text-slate-500 mt-0.5 font-medium">
                       {customer} • {customerPhone ? "+91 " + customerPhone : "Walk-in"}
                     </div>
+                  </div>
+
+                  {/* SmartSoundbox Voice Indicator */}
+                  <div className="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl text-left flex items-center justify-between gap-2 max-w-sm mx-auto w-full">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold text-amber-950 flex items-center gap-1">
+                        <span>🎙️</span>
+                        <span>Soundbox: {voiceLang === "hi-IN" ? "Amitabh Bachchan Voice" : "English Voice"}</span>
+                      </div>
+                      <div className="text-[10px] text-amber-800 truncate font-medium">
+                        {voiceLang === "hi-IN"
+                          ? `"देवियों और सज्जनों, FlexiPay पर ₹${Number(amount || 0).toLocaleString("en-IN")} रुपये प्राप्त हुए!"`
+                          : `"Received ₹${Number(amount || 0).toLocaleString("en-IN")} on FlexiPay."`}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => announceSoundbox(amount || 2500)}
+                      className="px-2 py-1 text-[10px] font-bold bg-[#F47920] hover:bg-[#E06710] text-white rounded-lg transition shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
+                      title="Test Voice Announcement"
+                    >
+                      <Volume2 size={11} />
+                      <span>Hear Voice</span>
+                    </button>
                   </div>
 
                   {!paid ? (
