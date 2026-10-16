@@ -1611,37 +1611,37 @@ function RewardsView({ points, setPoints }) {
 function ProfileView({ currentUser, onLogout, credit, creditLimit, points, onRepayClick, onOpenAaModal }) {
   const user = currentUser || { fullName: "Rutuja Sonawane", vpa: "rutuja@flexipay", phone: "+91 98765 43210", initials: "RS", avatarBg: "bg-[#002855]" };
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 sm:space-y-5 pb-6">
       {/* User Header */}
-      <div className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs text-center relative">
-        <div className={`w-16 h-16 rounded-full ${user.avatarBg || "bg-[#002855]"} text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs`}>
+      <div className="p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white shadow-xs text-center relative">
+        <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full ${user.avatarBg || "bg-[#002855]"} text-white flex items-center justify-center font-bold text-lg sm:text-xl mx-auto shadow-xs`}>
           {user.initials}
         </div>
-        <h2 className="text-base font-bold text-gray-900 mt-3">{user.fullName}</h2>
-        <div className="text-xs text-gray-500 font-mono">{user.vpa} • {user.phone}</div>
-        <div className="text-xs text-emerald-700 font-semibold mt-2 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-          <ShieldCheck size={14} /> Full KYC Verified (RBI DLG)
+        <h2 className="text-sm sm:text-base font-bold text-gray-900 mt-2.5">{user.fullName}</h2>
+        <div className="text-[11px] sm:text-xs text-gray-500 font-mono mt-0.5">{user.vpa} • {user.phone}</div>
+        <div className="text-[10px] sm:text-xs text-emerald-700 font-semibold mt-2 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+          <ShieldCheck size={13} /> Full KYC Verified (RBI DLG)
         </div>
       </div>
 
       {/* Account Aggregator Credit Underwriting Card (PDF Key Feature) */}
       <div
         onClick={onOpenAaModal}
-        className="p-4 rounded-xl border border-orange-200 bg-orange-50/40 hover:bg-orange-50 transition cursor-pointer flex items-center justify-between"
+        className="p-3.5 sm:p-4 rounded-xl border border-orange-200 bg-orange-50/40 hover:bg-orange-50 transition cursor-pointer flex items-center justify-between"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-sm shrink-0">
-            <Sparkles size={20} />
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+            <Sparkles size={18} />
           </div>
           <div>
-            <div className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+            <div className="text-xs font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
               <span>Account Aggregator Underwriting</span>
-              <span className="text-[10px] font-bold text-[#F47920] bg-white border border-orange-200 px-1.5 py-0.2 rounded">
+              <span className="text-[9px] font-bold text-[#F47920] bg-white border border-orange-200 px-1.5 py-0.2 rounded">
                 RBI Approved AA
               </span>
             </div>
             <div className="text-[11px] text-gray-600 mt-0.5">
-              Current Limit: <strong>{formatRupee(creditLimit)}</strong> • Tap to upgrade to ₹40,000+
+              Current Limit: <strong>{formatRupee(creditLimit)}</strong> • Tap to upgrade
             </div>
           </div>
         </div>
@@ -1650,30 +1650,30 @@ function ProfileView({ currentUser, onLogout, credit, creditLimit, points, onRep
 
       {/* Linked Bank Accounts */}
       <div>
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
           Linked Bank Accounts
         </div>
-        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
-          <div className="p-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Building2 size={20} className="text-gray-600" />
+        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white shadow-xs">
+          <div className="p-3 sm:p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <Building2 size={18} className="text-gray-600" />
               <div>
                 <div className="text-xs font-bold text-gray-900">HDFC Bank •••• 4812</div>
-                <div className="text-[11px] text-gray-500">Savings A/c • Primary UPI</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-500">Savings A/c • Primary UPI</div>
               </div>
             </div>
-            <span className="text-[11px] font-semibold text-[#F47920]">Default</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#F47920]">Default</span>
           </div>
 
-          <div className="p-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Building2 size={20} className="text-gray-600" />
+          <div className="p-3 sm:p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <Building2 size={18} className="text-gray-600" />
               <div>
                 <div className="text-xs font-bold text-gray-900">State Bank of India •••• 8912</div>
-                <div className="text-[11px] text-gray-500">Savings A/c • Secondary</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-500">Savings A/c • Secondary</div>
               </div>
             </div>
-            <span className="text-[11px] text-gray-400">Linked</span>
+            <span className="text-[10px] sm:text-[11px] text-gray-400">Linked</span>
           </div>
         </div>
       </div>
@@ -1681,23 +1681,23 @@ function ProfileView({ currentUser, onLogout, credit, creditLimit, points, onRep
       {/* Credit Score & Health */}
       <div
         onClick={onOpenAaModal}
-        className="p-4 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition cursor-pointer flex items-center justify-between"
+        className="p-3.5 sm:p-4 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition cursor-pointer flex items-center justify-between shadow-xs"
       >
         <div>
-          <div className="text-xs text-gray-500">Experian Bureau Score</div>
-          <div className="text-lg font-bold text-gray-900 mt-0.5">785 • Excellent</div>
-          <div className="text-xs text-[#F47920] font-semibold mt-0.5">
-            Pre-qualified for instant Account Aggregator limit increase →
+          <div className="text-[11px] text-gray-500">Experian Bureau Score</div>
+          <div className="text-base sm:text-lg font-bold text-gray-900 mt-0.5">785 • Excellent</div>
+          <div className="text-[11px] text-[#F47920] font-semibold mt-0.5">
+            Pre-qualified for instant AA limit boost →
           </div>
         </div>
-        <ChevronRight size={18} className="text-gray-400" />
+        <ChevronRight size={18} className="text-gray-400 shrink-0" />
       </div>
 
       {/* 45-Day Pay Later Statement */}
-      <div className="p-4 rounded-xl border border-gray-200 bg-white flex items-center justify-between">
+      <div className="p-3.5 sm:p-4 rounded-xl border border-gray-200 bg-white flex items-center justify-between shadow-xs">
         <div>
-          <div className="text-xs text-gray-500">Current FlexiPay Bill (45-Day Cycle)</div>
-          <div className="text-base font-bold text-gray-900 mt-0.5">
+          <div className="text-[11px] text-gray-500">Current FlexiPay Bill (45-Day Cycle)</div>
+          <div className="text-sm sm:text-base font-bold text-gray-900 mt-0.5">
             {formatRupee(creditLimit - credit)} • Due 30 Nov
           </div>
           <div className="text-[10px] text-emerald-700 font-medium">0% interest if paid on or before due date</div>
@@ -1713,19 +1713,19 @@ function ProfileView({ currentUser, onLogout, credit, creditLimit, points, onRep
       </div>
 
       {/* Logout / Unlink Device Session */}
-      <div className="pt-2 pb-4">
+      <div className="pt-1">
         <button
           onClick={() => {
             if (window.confirm("Are you sure you want to log out of this device? Your local session will be unlinked.")) {
               onLogout();
             }
           }}
-          className="w-full py-3 px-4 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+          className="w-full py-2.5 sm:py-3 px-4 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
         >
-          <LogOut size={16} />
+          <LogOut size={15} />
           <span>Log Out &amp; Unlink Device</span>
         </button>
-        <p className="text-[10px] text-gray-400 text-center mt-2">
+        <p className="text-[10px] text-gray-400 text-center mt-1.5">
           Complies with RBI Digital Lending Guidelines &amp; NPCI Device Binding
         </p>
       </div>
@@ -1925,7 +1925,9 @@ function AuthenticOtpVerification({
     setError("");
     const chars = generatedOtp.split("");
     setDigits(chars);
-    inputRefs[3]?.current?.focus();
+    if (typeof document !== "undefined" && document.activeElement) {
+      document.activeElement.blur();
+    }
   };
 
   const handleResend = () => {
@@ -2008,7 +2010,7 @@ function AuthenticOtpVerification({
       </div>
 
       {/* 4 Clean Interactive Digit Boxes */}
-      <div className="flex justify-center items-center gap-2.5 sm:gap-3 py-2" onPaste={handlePaste}>
+      <div className="flex justify-center items-center gap-2 sm:gap-3 py-1.5 sm:py-2" onPaste={handlePaste}>
         {digits.map((digit, idx) => (
           <input
             key={idx}
@@ -2020,8 +2022,7 @@ function AuthenticOtpVerification({
             value={digit}
             onChange={(e) => handleDigitChange(idx, e.target.value)}
             onKeyDown={(e) => handleKeyDown(idx, e)}
-            style={{ width: "52px", height: "58px", minWidth: "44px", maxWidth: "56px" }}
-            className={`shrink-0 text-center text-2xl font-black rounded-2xl border-2 transition outline-none bg-slate-50/80 text-slate-900 shadow-xs box-border ${
+            className={`w-11 h-12 sm:w-13 sm:h-14 shrink-0 text-center text-xl sm:text-2xl font-black rounded-xl sm:rounded-2xl border-2 transition outline-none bg-slate-50/80 text-slate-900 shadow-xs box-border ${
               error
                 ? "border-rose-400 bg-rose-50/30 text-rose-900"
                 : digit
@@ -2056,18 +2057,18 @@ function AuthenticOtpVerification({
       </div>
 
       {/* Bank Grade Security Assurance */}
-      <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+      <div className="flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400 pt-1 border-t border-slate-100">
         <Lock size={12} className="text-emerald-600 shrink-0" />
         <span>256-Bit SSL Bank Grade Security • RBI DLG Mandate</span>
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-white/95 backdrop-blur-xs shrink-0">
         <button
           type="button"
           onClick={onBack}
           disabled={isVerifying}
-          className="w-1/3 py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+          className="w-1/3 py-2.5 sm:py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
         >
           Back
         </button>
@@ -2075,7 +2076,7 @@ function AuthenticOtpVerification({
           type="button"
           onClick={handleVerify}
           disabled={isVerifying || digits.some((d) => !d)}
-          className={`w-2/3 py-3 font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-2 ${accentBtnClass}`}
+          className={`w-2/3 py-2.5 sm:py-3 font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-2 ${accentBtnClass}`}
         >
           {isVerifying ? (
             <>
@@ -2480,20 +2481,20 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-[9999] bg-slate-950/75 backdrop-blur-md flex items-end sm:items-center justify-center p-2 sm:p-4 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget && step !== 2 && step !== 3) onClose();
       }}
     >
       <div
-        className="bg-white rounded-3xl w-full max-w-sm sm:max-w-md shadow-2xl relative overflow-hidden border border-slate-100 my-auto animate-tab-enter"
+        className="bg-white rounded-3xl w-full max-w-sm sm:max-w-md shadow-2xl relative flex flex-col max-h-[92dvh] sm:max-h-[85vh] border border-slate-100 my-auto animate-tab-enter overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* Top Header Bar */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/60 to-white">
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-orange-50/60 to-white shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-[#F47920] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-xs shadow-xs">
               AA
             </div>
             <div>
@@ -2515,7 +2516,7 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
         </div>
 
         {/* Step Progression Bar */}
-        <div className="grid grid-cols-4 px-5 pt-3 gap-1">
+        <div className="grid grid-cols-4 px-5 pt-3 gap-1 shrink-0">
           {["Select Bank", "OTP Consent", "Analysis", "Limit Boost"].map((label, idx) => {
             const stepNum = idx + 1;
             const active = step === stepNum;
@@ -2534,6 +2535,9 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
             );
           })}
         </div>
+
+        {/* Scrollable Content Body for Mobile Keyboard Safety */}
+        <div className="overflow-y-auto overscroll-contain flex-1">
 
         {/* STEP 1: Select Bank */}
         {step === 1 && (
@@ -2603,22 +2607,22 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
 
         {/* STEP 2: AA Consent & Authentic OTP Verification */}
         {step === 2 && (
-          <div className="p-5 space-y-4 animate-tab-enter">
+          <div className="p-3 sm:p-5 space-y-2.5 sm:space-y-3 animate-tab-enter">
             {/* RBI AA Consent Spec Box */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-              <div className="flex justify-between text-[11px]">
+            <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1 sm:space-y-1.5">
+              <div className="flex justify-between text-[10px] sm:text-[11px]">
                 <span className="text-gray-500">Financial Information Provider:</span>
                 <span className="font-bold text-gray-900">{selectedBank}</span>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[10px] sm:text-[11px]">
                 <span className="text-gray-500">Consented Entities:</span>
                 <span className="font-bold text-gray-900">FlexiPay & Partner SFB</span>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[10px] sm:text-[11px]">
                 <span className="text-gray-500">Data Scope:</span>
-                <span className="font-semibold text-gray-900">12 Months Statements & Balance</span>
+                <span className="font-semibold text-gray-900">12 Months Statements</span>
               </div>
-              <div className="flex justify-between text-[11px]">
+              <div className="flex justify-between text-[10px] sm:text-[11px]">
                 <span className="text-gray-500">Consent Validity:</span>
                 <span className="font-bold text-emerald-700">One-Time Fetch (Revocable)</span>
               </div>
@@ -2724,6 +2728,7 @@ function AaUnderwritingModal({ creditLimit, onClose, onUpgrade }) {
           </div>
         )}
 
+        </div>
       </div>
     </div>,
     document.body
