@@ -31,38 +31,51 @@ import {
   MessageSquare,
   RefreshCw,
   CheckCircle2,
-  Cloud
+  Cloud,
+  LogOut
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import "./index.css";
 import { syncSubscribeBill, syncPublishPayment, syncSubscribeOffer, isFirebaseActive } from "./firebaseSync";
 import FirebaseSettingsModal from "./FirebaseSettingsModal";
-import UserSwitchModal, { PRESET_USERS } from "./UserSwitchModal";
+import OnboardingFlow from "./OnboardingFlow";
 
 function getInitialUser() {
   if (typeof window !== "undefined") {
     try {
+      const saved = localStorage.getItem("flexipay_user_session");
+      if (saved) return JSON.parse(saved);
+
       const params = new URLSearchParams(window.location.search);
       const urlUser = params.get("user");
-      if (urlUser) {
-        const found = PRESET_USERS.find(u => u.id === urlUser.toLowerCase());
-        if (found) return found;
+      if (urlUser === "umesh") {
         return {
-          id: urlUser.toLowerCase(),
-          name: urlUser,
-          fullName: urlUser,
-          vpa: `${urlUser.toLowerCase()}@flexipay`,
-          phone: "+91 98201 00000",
-          initials: urlUser.slice(0, 2).toUpperCase(),
-          avatarBg: "bg-teal-700",
-          defaultLimit: 50000
+          id: "umesh",
+          fullName: "Umesh Kumar",
+          phone: "+91 98201 44552",
+          vpa: "umesh@flexipay",
+          initials: "UK",
+          avatarBg: "bg-blue-700",
+          creditLimit: 60000,
+          availableCredit: 60000,
+          kycVerified: true
+        };
+      } else if (urlUser === "rutuja") {
+        return {
+          id: "rutuja",
+          fullName: "Rutuja Sonawane",
+          phone: "+91 98765 43210",
+          vpa: "rutuja@flexipay",
+          initials: "RS",
+          avatarBg: "bg-[#002855]",
+          creditLimit: 60000,
+          availableCredit: 60000,
+          kycVerified: true
         };
       }
-      const saved = localStorage.getItem("flexiActiveUser");
-      if (saved) return JSON.parse(saved);
     } catch (e) {}
   }
-  return PRESET_USERS[0]; // Default to Umesh
+  return null;
 }
 
 // ----------------------------------------------------
@@ -258,17 +271,16 @@ function App() {
   const [showCloudSettings, setShowCloudSettings] = useState(false);
   const [cloudActive, setCloudActive] = useState(isFirebaseActive());
   const [currentUser, setCurrentUser] = useState(getInitialUser);
-  const [userModalOpen, setUserModalOpen] = useState(false);
 
-  const handleSelectUser = (newUser) => {
-    setCurrentUser(newUser);
+  const handleLogout = () => {
     try {
-      localStorage.setItem("flexiActiveUser", JSON.stringify(newUser));
-      const savedLimit = localStorage.getItem(`flexiCreditLimit_${newUser.id}`);
-      const effectiveLimit = savedLimit ? Number(savedLimit) : newUser.defaultLimit;
-      setCreditLimit(effectiveLimit);
-      setCredit(effectiveLimit);
+      localStorage.removeItem("flexipay_user_session");
+      localStorage.removeItem("flexiCredit");
+      localStorage.removeItem("flexiCreditLimit");
+      localStorage.removeItem("flexiTx");
     } catch (e) {}
+    setCurrentUser(null);
+    navigate("/");
   };
 
   // Upgrade credit limit via Account Aggregator simulation
@@ -447,8 +459,8 @@ function App() {
     try {
       const syncPayload = {
         amount: Number(amount),
-        customer: currentUser.fullName,
-        upiId: currentUser.vpa,
+        customer: currentUser ? currentUser.fullName : "Customer",
+        upiId: currentUser ? currentUser.vpa : "customer@flexipay",
         mode: modeText,
         utr: newTx.utr,
         timestamp: Date.now()
@@ -521,6 +533,24 @@ function App() {
     { path: "/profile", label: "Profile", icon: User }
   ];
 
+  if (!currentUser) {
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const urlUserParam = params ? params.get("user") : "";
+    return (
+      <OnboardingFlow
+        initialUserParam={urlUserParam}
+        onComplete={(newProfile) => {
+          setCurrentUser(newProfile);
+          try {
+            localStorage.setItem("flexipay_user_session", JSON.stringify(newProfile));
+            setCreditLimit(newProfile.creditLimit || 60000);
+            setCredit(newProfile.availableCredit || 60000);
+          } catch (e) {}
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white sm:bg-gray-100 flex justify-center font-sans">
       
@@ -531,24 +561,21 @@ function App() {
         <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-20">
           {location.pathname === "/" ? (
             <div
-              onClick={() => setUserModalOpen(true)}
-              className="flex items-center gap-2.5 cursor-pointer p-1 -m-1 rounded-2xl hover:bg-slate-50 transition group"
-              title="Click to Switch User Profile"
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2.5 cursor-pointer p-1 -m-1 rounded-2xl hover:bg-slate-50 transition"
+              title="View Profile & Limits"
             >
-              <div className="relative">
-                <div className={`w-9 h-9 rounded-full ${currentUser.avatarBg} text-white flex items-center justify-center font-bold text-sm shadow-xs`}>
-                  {currentUser.initials}
-                </div>
-                <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 border border-white text-white flex items-center justify-center text-[9px] font-black">
-                  ⇄
-                </span>
+              <div className={`w-9 h-9 rounded-full ${currentUser.avatarBg || "bg-[#002855]"} text-white flex items-center justify-center font-bold text-sm shadow-xs`}>
+                {currentUser.initials}
               </div>
               <div>
-                <div className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
                   <span>{currentUser.fullName}</span>
-                  <span className="text-[10px] text-slate-400 group-hover:text-[#F47920] transition">▼</span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-full font-semibold">
+                    KYC Verified
+                  </span>
                 </div>
-                <div className="text-xs text-gray-500">{currentUser.vpa}</div>
+                <div className="text-xs text-gray-500 font-mono">{currentUser.vpa}</div>
               </div>
             </div>
           ) : (
@@ -661,7 +688,7 @@ function App() {
           {location.pathname === "/profile" && (
             <ProfileView
               currentUser={currentUser}
-              onSwitchProfile={() => setUserModalOpen(true)}
+              onLogout={handleLogout}
               credit={credit}
               creditLimit={creditLimit}
               points={points}
@@ -780,14 +807,6 @@ function App() {
             setShowCloudSettings(false);
             setCloudActive(isFirebaseActive());
           }}
-        />
-
-        {/* Multi-User Profile Switcher Modal */}
-        <UserSwitchModal
-          isOpen={userModalOpen}
-          onClose={() => setUserModalOpen(false)}
-          currentUser={currentUser}
-          onSelectUser={handleSelectUser}
         />
 
       </div>
@@ -1589,25 +1608,19 @@ function RewardsView({ points, setPoints }) {
 // ----------------------------------------------------
 // PROFILE & BANK ACCOUNTS VIEW
 // ----------------------------------------------------
-function ProfileView({ currentUser, onSwitchProfile, credit, creditLimit, points, onRepayClick, onOpenAaModal }) {
-  const user = currentUser || { fullName: "Rutuja Sonawane", vpa: "rutuja@flexipay", phone: "+91 98765 43210", initials: "R", avatarBg: "bg-[#002855]" };
+function ProfileView({ currentUser, onLogout, credit, creditLimit, points, onRepayClick, onOpenAaModal }) {
+  const user = currentUser || { fullName: "Rutuja Sonawane", vpa: "rutuja@flexipay", phone: "+91 98765 43210", initials: "RS", avatarBg: "bg-[#002855]" };
   return (
     <div className="space-y-6">
       {/* User Header */}
       <div className="p-5 rounded-2xl border border-gray-200 bg-white shadow-xs text-center relative">
-        <button
-          onClick={onSwitchProfile}
-          className="absolute right-3.5 top-3.5 text-[10px] font-extrabold text-[#F47920] bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full hover:bg-orange-100 transition cursor-pointer"
-        >
-          Switch User ⇄
-        </button>
-        <div className={`w-16 h-16 rounded-full ${user.avatarBg} text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs`}>
+        <div className={`w-16 h-16 rounded-full ${user.avatarBg || "bg-[#002855]"} text-white flex items-center justify-center font-bold text-xl mx-auto shadow-xs`}>
           {user.initials}
         </div>
         <h2 className="text-base font-bold text-gray-900 mt-3">{user.fullName}</h2>
         <div className="text-xs text-gray-500 font-mono">{user.vpa} • {user.phone}</div>
         <div className="text-xs text-emerald-700 font-semibold mt-2 inline-flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-          <ShieldCheck size={14} /> Full KYC Verified
+          <ShieldCheck size={14} /> Full KYC Verified (RBI DLG)
         </div>
       </div>
 
@@ -1697,6 +1710,24 @@ function ProfileView({ currentUser, onSwitchProfile, credit, creditLimit, points
             Pay Dues
           </button>
         )}
+      </div>
+
+      {/* Logout / Unlink Device Session */}
+      <div className="pt-2 pb-4">
+        <button
+          onClick={() => {
+            if (window.confirm("Are you sure you want to log out of this device? Your local session will be unlinked.")) {
+              onLogout();
+            }
+          }}
+          className="w-full py-3 px-4 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+        >
+          <LogOut size={16} />
+          <span>Log Out &amp; Unlink Device</span>
+        </button>
+        <p className="text-[10px] text-gray-400 text-center mt-2">
+          Complies with RBI Digital Lending Guidelines &amp; NPCI Device Binding
+        </p>
       </div>
     </div>
   );

@@ -165,82 +165,76 @@
     </div>
 
     {/* Phone Testing Helper Section */}
-    <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
-      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div class="space-y-1">
-          <div class="inline-flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wider">
-            <span>📱</span>
-            <span>Multi-User Real Phone Testing</span>
+    <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-8">
+      <div class="space-y-4 max-w-xl text-center lg:text-left">
+        <div class="inline-flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wider">
+          <span>📱</span>
+          <span>Authentic FinTech User Onboarding</span>
+        </div>
+        <h4 class="text-xl sm:text-2xl font-bold text-white">
+          Scan to Experience Onboarding on Real Mobile Devices
+        </h4>
+        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+          Open on any mobile device. Each user enters their mobile number, verifies with simulated SMS OTP, and undergoes instant <strong>Account Aggregator (AA) credit underwriting</strong> to activate a personalized 45-day 0% interest credit line.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 text-left pt-1">
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-400 font-bold">✓</span>
+            <span>Device &amp; SIM Session Isolation</span>
           </div>
-          <h4 class="text-xl sm:text-2xl font-bold text-white">
-            Test Simultaneously with Multiple Consumer Devices
-          </h4>
-          <p class="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
-            Scan with two different phones to test concurrently. Each user has their own UPI VPA and credit profile. Any user can also switch profiles or create custom user names on the fly inside the app!
-          </p>
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-400 font-bold">✓</span>
+            <span>Real-time SMS OTP Simulation</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-400 font-bold">✓</span>
+            <span>Experian Bureau &amp; AA Analysis</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-400 font-bold">✓</span>
+            <span>RBI DLG &amp; DPDP Compliant</span>
+          </div>
+        </div>
+
+        {/* Quick Launch Direct Buttons */}
+        <div class="pt-2 flex flex-wrap gap-2.5 justify-center lg:justify-start text-xs">
+          <a
+            id="link-consumer-clean"
+            href="./consumer/"
+            target="_blank"
+            class="py-2 px-3.5 rounded-xl bg-white text-slate-950 font-bold hover:bg-slate-100 transition shadow-sm flex items-center gap-1.5"
+          >
+            <span>✨ New User Sign Up (Full Flow)</span>
+          </a>
+          <a
+            id="link-umesh"
+            href="./consumer/?user=umesh"
+            target="_blank"
+            class="py-2 px-3.5 rounded-xl bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 transition font-semibold"
+          >
+            <span>👤 Pre-fill Umesh</span>
+          </a>
+          <a
+            id="link-rutuja"
+            href="./consumer/?user=rutuja"
+            target="_blank"
+            class="py-2 px-3.5 rounded-xl bg-orange-600/20 text-orange-300 border border-orange-500/30 hover:bg-orange-600/30 transition font-semibold"
+          >
+            <span>👤 Pre-fill Rutuja</span>
+          </a>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-        {/* User 1: Umesh */}
-        <div class="p-5 bg-slate-950/70 border border-slate-800/80 rounded-2xl flex flex-col items-center text-center space-y-3">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            <span class="text-sm font-bold text-white">User 1: Umesh Kumar</span>
-          </div>
-          <div class="text-xs text-slate-400 font-mono">umesh@flexipay • ₹50,000 Limit</div>
-
-          <div class="p-3 bg-white rounded-xl shadow-lg my-1">
-            <img
-              id="mobile-qr-umesh"
-              alt="Scan for Umesh Kumar Consumer App"
-              class="w-32 h-32"
-            />
-          </div>
-
-          <div class="w-full pt-1">
-            <a
-              id="link-umesh"
-              href="./consumer/?user=umesh"
-              target="_blank"
-              class="block w-full py-2 px-3 text-xs font-bold bg-blue-600/20 text-blue-300 border border-blue-500/30 rounded-xl hover:bg-blue-600/30 transition text-center"
-            >
-              Open Umesh App →
-            </a>
-          </div>
-        </div>
-
-        {/* User 2: Rutuja */}
-        <div class="p-5 bg-slate-950/70 border border-slate-800/80 rounded-2xl flex flex-col items-center text-center space-y-3">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-[#F47920]"></span>
-            <span class="text-sm font-bold text-white">User 2: Rutuja Sonawane</span>
-          </div>
-          <div class="text-xs text-slate-400 font-mono">rutuja@flexipay • ₹60,000 Limit</div>
-
-          <div class="p-3 bg-white rounded-xl shadow-lg my-1">
-            <img
-              id="mobile-qr-rutuja"
-              alt="Scan for Rutuja Sonawane Consumer App"
-              class="w-32 h-32"
-            />
-          </div>
-
-          <div class="w-full pt-1">
-            <a
-              id="link-rutuja"
-              href="./consumer/?user=rutuja"
-              target="_blank"
-              class="block w-full py-2 px-3 text-xs font-bold bg-orange-600/20 text-orange-300 border border-orange-500/30 rounded-xl hover:bg-orange-600/30 transition text-center"
-            >
-              Open Rutuja App →
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div class="text-center text-xs text-slate-400 pt-2 border-t border-slate-800/60">
-        💡 <strong>Tip:</strong> You can switch users or add any new custom user name anytime by tapping the profile name at the top of the Consumer App header!
+      {/* Universal QR Code */}
+      <div class="p-4 bg-white rounded-2xl shadow-2xl shrink-0 flex flex-col items-center">
+        <img
+          id="mobile-qr-universal"
+          alt="Scan to launch Consumer Onboarding"
+          class="w-40 h-40"
+        />
+        <span class="text-[11px] font-bold text-slate-900 mt-2">Scan with Phone Camera</span>
+        <span class="text-[9px] text-slate-500">Opens Consumer App Onboarding</span>
       </div>
     </div>
   </main>
@@ -251,17 +245,16 @@
   </footer>
 
   <script>
-    // Automatically generate QR codes linking directly to the consumer app path on the current domain
+    // Generate universal QR code linking directly to the consumer app on the current domain
     const basePath = window.location.origin + window.location.pathname.replace(/\/?$/, '/');
+    const consumerUrl = basePath + 'consumer/';
     const umeshUrl = basePath + 'consumer/?user=umesh';
     const rutujaUrl = basePath + 'consumer/?user=rutuja';
 
-    const qrUmeshApi = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=' + encodeURIComponent(umeshUrl);
-    const qrRutujaApi = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=' + encodeURIComponent(rutujaUrl);
+    const qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=6&data=' + encodeURIComponent(consumerUrl);
 
-    document.getElementById('mobile-qr-umesh').src = qrUmeshApi;
-    document.getElementById('mobile-qr-rutuja').src = qrRutujaApi;
-
+    document.getElementById('mobile-qr-universal').src = qrApi;
+    document.getElementById('link-consumer-clean').href = consumerUrl;
     document.getElementById('link-umesh').href = umeshUrl;
     document.getElementById('link-rutuja').href = rutujaUrl;
   </script>
