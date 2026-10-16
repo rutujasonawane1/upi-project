@@ -156,7 +156,55 @@ cd "d:\upi project\UPI-FlexiPay-Clean\upi-clean"
 npm run build
 ```
 
-Both projects compile using Vite with output bundles placed in their respective `dist/` directories.
+Both projects are pre-configured with relative base paths (`base: "./"` in `vite.config.js`), creating static bundles in `dist/` ready to host directly on GitHub Pages, Vercel, or Netlify.
+
+---
+
+## 🌐 Hosting on GitHub Pages with Firebase Realtime Sync
+
+To host both applications on GitHub Pages and have real-time dynamic QR scanning work **across different devices (e.g., your laptop screen and your phone camera)**:
+
+### 1. Create a Free Firebase Realtime Database (2 minutes)
+1. Go to [console.firebase.google.com](https://console.firebase.google.com/) and create a free project.
+2. In the left menu, click **Build > Realtime Database** > **Create Database**.
+3. Under the **Rules** tab, set test rules:
+   ```json
+   {
+     "rules": {
+       ".read": true,
+       ".write": true
+     }
+   }
+   ```
+4. Copy your Database URL (e.g. `https://your-project-default-rtdb.firebaseio.com`).
+
+### 2. Connect Firebase Directly in the App (Zero Re-compilation Needed)
+1. Open either the Merchant POS or Consumer App in your browser.
+2. Click the **Cloud Sync** (☁️) icon in the top header.
+3. Paste your Firebase Database URL and click **Save & Connect Cloud Sync**.
+4. The cloud pill will switch to **🟢 Cloud Live**, and all bills, offers, and payments will synchronize in real-time across the world!
+
+---
+
+## 🤖 Automated CI/CD Deployment with GitHub Actions
+
+The repository includes a ready-to-run GitHub Actions workflow in [`.github/workflows/deploy.yml`](file:///d:/upi%20project/.github/workflows/deploy.yml) that automatically builds both apps and publishes them whenever you push code to `main` or `master`.
+
+### One-Time Setup in GitHub:
+1. Push your code to GitHub:
+   ```bash
+   git add .
+   git commit -m "feat: Add Firebase cloud sync and GitHub Actions CI/CD"
+   git push origin main
+   ```
+2. On your GitHub repository page:
+   - Navigate to **Settings** > **Pages**.
+   - Under **Build and deployment > Source**, select **GitHub Actions** (instead of "Deploy from a branch").
+3. GitHub Actions will automatically trigger, build both applications, and deploy the site!
+4. Your live ecosystem will be available at:
+   - **Demo Portal & Launcher**: `https://<username>.github.io/<repo>/`
+   - **Merchant POS Terminal**: `https://<username>.github.io/<repo>/merchant/`
+   - **Consumer UPI App**: `https://<username>.github.io/<repo>/consumer/`
 
 ---
 
@@ -166,3 +214,4 @@ Both projects compile using Vite with output bundles placed in their respective 
 - **Cooling-off Period**: Transparent 3-day penalty-free exit terms for borrowers.
 - **Equated Daily Installment (EDI)**: Automated micro-sweeps from daily QR settlements without bulk monthly EMI burden.
 - **Account Aggregator (AA) Framework**: Granular, time-bound consent architecture with one-time authorization tokens.
+

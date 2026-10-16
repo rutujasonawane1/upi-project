@@ -1,0 +1,63 @@
+name: Deploy FlexiPay to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Merchant POS Terminal
+        run: |
+          cd FlexiPay-Merchant-Clean/flexipay-merchant
+          npm install
+          npm run build
+
+      - name: Build Consumer UPI App
+        run: |
+          cd UPI-FlexiPay-Clean/upi-clean
+          npm install
+          npm run build
+
+      - name: Assemble GitHub Pages Distribution
+        run: |
+          mkdir -p dist-site/merchant dist-site/consumer
+          cp -r FlexiPay-Merchant-Clean/flexipay-merchant/dist/* dist-site/merchant/
+          cp -r UPI-FlexiPay-Clean/upi-clean/dist/* dist-site/consumer/
+          cp landing.html dist-site/index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

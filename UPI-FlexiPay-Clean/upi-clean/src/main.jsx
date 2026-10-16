@@ -30,10 +30,13 @@ import {
   Smartphone,
   MessageSquare,
   RefreshCw,
-  CheckCircle2
+  CheckCircle2,
+  Cloud
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import "./index.css";
+import { syncSubscribeBill, syncPublishPayment, syncSubscribeOffer, isFirebaseActive } from "./firebaseSync";
+import FirebaseSettingsModal from "./FirebaseSettingsModal";
 
 // ----------------------------------------------------
 // ERROR BOUNDARY (Zero Blank Screen Guarantee)
@@ -225,6 +228,8 @@ function App() {
   const [repayModal, setRepayModal] = useState(false);
   const [selectedTx, setSelectedTx] = useState(null);
   const [aaModal, setAaModal] = useState(false);
+  const [showCloudSettings, setShowCloudSettings] = useState(false);
+  const [cloudActive, setCloudActive] = useState(isFirebaseActive());
 
   // Upgrade credit limit via Account Aggregator simulation
   const handleAaUpgrade = (newLimit) => {
@@ -322,10 +327,33 @@ function App() {
         .catch(() => {});
     }, 1500);
 
+    // 4. Firebase Cloud Realtime Listeners (Global cross-device sync)
+    const unsubscribeBill = syncSubscribeBill((bill) => {
+      console.log("[Consumer Firebase Bill Received]", bill);
+      if (bill && bill.amount) {
+        setAmount(Number(bill.amount));
+        if (bill.merchant) setMerchant(bill.merchant);
+        if (bill.vpa) setVpa(bill.vpa);
+      }
+    });
+
+    const unsubscribeOffer = syncSubscribeOffer((offerData) => {
+      console.log("[Consumer Firebase Offer Received]", offerData);
+      if (offerData && offerData.title) {
+        setActiveOffer({
+          title: offerData.title || "Store Special Offer",
+          subtitle: `Orders above ₹${offerData.minSpend || 1000} • Cap ₹${offerData.cashbackCap || 150}`,
+          minSpend: offerData.minSpend || 1000
+        });
+      }
+    });
+
     return () => {
       clearInterval(offerPoll);
       if (channel) channel.close();
       window.removeEventListener("storage", handleStorageEvent);
+      if (unsubscribeBill) unsubscribeBill();
+      if (unsubscribeOffer) unsubscribeOffer();
     };
   }, []);
 
@@ -387,6 +415,9 @@ function App() {
       };
 
       console.log("[Customer Pay] Broadcasting payment:", syncPayload);
+
+      // 0. Firebase Realtime Cloud Broadcast (cross-device global sync)
+      syncPublishPayment(syncPayload);
 
       // 1. Send via local HTTP sync relay (crosses localhost port boundary 5173 -> 5174 seamlessly)
       fetch("http://localhost:4000/api/pay", {
@@ -492,10 +523,21 @@ function App() {
             </button>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowCloudSettings(true)}
+              className={`p-2 rounded-full transition flex items-center justify-center cursor-pointer ${
+                cloudActive
+                  ? "text-emerald-600 hover:bg-emerald-50"
+                  : "text-gray-400 hover:bg-orange-50 hover:text-[#F47920]"
+              }`}
+              title="Configure Firebase Realtime Cloud Sync"
+            >
+              <Cloud size={20} />
+            </button>
             <button
               onClick={() => navigate("/qr")}
-              className="p-2 text-gray-600 hover:bg-orange-50 hover:text-[#F47920] rounded-full transition"
+              className="p-2 text-gray-600 hover:bg-orange-50 hover:text-[#F47920] rounded-full transition cursor-pointer"
               title="My QR"
             >
               <QrCode size={20} />
@@ -676,6 +718,15 @@ function App() {
           </div>,
           document.body
         )}
+
+        {/* Cloud Sync Settings Modal for Realtime Cross-Device Testing */}
+        <FirebaseSettingsModal
+          isOpen={showCloudSettings}
+          onClose={() => {
+            setShowCloudSettings(false);
+            setCloudActive(isFirebaseActive());
+          }}
+        />
 
       </div>
     </div>

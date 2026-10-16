@@ -43,9 +43,12 @@ import {
   Shield,
   ArrowLeft,
   Lock,
-  MessageSquare
+  MessageSquare,
+  Cloud
 } from "lucide-react";
 import "./index.css";
+import { syncPublishBill, syncSubscribePayments, syncPublishOffer, isFirebaseActive } from "./firebaseSync";
+import FirebaseSettingsModal from "./FirebaseSettingsModal";
 
 // ----------------------------------------------------
 // REALISTIC MERCHANT TRANSACTION DATA (Google Pay Business style)
@@ -148,6 +151,8 @@ function App() {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [customerDisplayOpen, setCustomerDisplayOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showCloudSettings, setShowCloudSettings] = useState(false);
+  const [cloudActive, setCloudActive] = useState(isFirebaseActive());
 
   // Auto scroll to top on tab change so features are instantly visible without scrolling
   useEffect(() => {
@@ -280,6 +285,12 @@ function App() {
       }
     };
 
+    // Firebase Cloud Realtime Listener (Global cross-device sync)
+    const unsubscribeFirebase = syncSubscribePayments((p) => {
+      console.log("[Merchant Firebase Payment Event]", p);
+      processIncomingPayment(p);
+    });
+
     // Fast polling to sync-server on port 4000 to bridge cross-origin port isolation
     let lastPollTime = Date.now();
     const pollInterval = setInterval(() => {
@@ -302,6 +313,7 @@ function App() {
       clearInterval(pollInterval);
       if (channel) channel.close();
       window.removeEventListener("storage", handleStorage);
+      if (unsubscribeFirebase) unsubscribeFirebase();
     };
   }, []);
 
@@ -348,6 +360,10 @@ function App() {
       timestamp: Date.now()
     };
     try {
+      // 1. Firebase Realtime Cloud Publish (cross-device)
+      syncPublishBill(billPayload);
+
+      // 2. Local relay server publish
       fetch("http://localhost:4000/api/bill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -496,6 +512,20 @@ function App() {
                 </>
               )}
             </div>
+
+            {/* Cloud Sync Button */}
+            <button
+              onClick={() => setShowCloudSettings(true)}
+              className={`px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold rounded-xl border transition flex items-center gap-1.5 cursor-pointer ${
+                cloudActive
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+              }`}
+              title="Configure Firebase Realtime Cloud Sync"
+            >
+              <Cloud size={14} className={cloudActive ? "text-emerald-600" : "text-slate-400"} />
+              <span className="hidden sm:inline">{cloudActive ? "Cloud Live" : "Cloud Sync"}</span>
+            </button>
 
             {/* Bank Badge (Desktop Only) */}
             <div className="hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
@@ -1135,6 +1165,15 @@ function App() {
         </div>,
         document.body
       )}
+
+      {/* Cloud Sync Settings Modal for Realtime Cross-Device Testing */}
+      <FirebaseSettingsModal
+        isOpen={showCloudSettings}
+        onClose={() => {
+          setShowCloudSettings(false);
+          setCloudActive(isFirebaseActive());
+        }}
+      />
     </div>
   );
 }
@@ -1332,6 +1371,10 @@ function OffersTab({ offer, setOffer }) {
     setSaved(true);
 
     try {
+      // 1. Firebase Realtime Cloud publish
+      syncPublishOffer(updatedOffer);
+
+      // 2. Local relay server publish
       fetch("http://localhost:4000/api/offer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
