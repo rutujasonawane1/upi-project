@@ -593,39 +593,69 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white sm:bg-gray-100 flex justify-center font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0B132B] to-[#1C2541] flex flex-col items-center justify-center font-sans sm:py-6 sm:px-4 text-slate-900 selection:bg-orange-500/20 selection:text-orange-500 relative">
       
-      {/* Clean Device Container */}
-      <div className="w-full max-w-md bg-white min-h-screen flex flex-col sm:shadow-lg sm:border-x sm:border-gray-200">
+      {/* Decorative Ambient Aura behind Phone on Desktop */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden hidden sm:block">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-orange-500/15 via-purple-600/10 to-teal-500/10 rounded-full blur-[140px]" />
+        <div className="absolute bottom-8 left-8 text-xs font-mono text-slate-400/60 hidden lg:block">
+          ⚡ FlexiPay Mobile • iOS 18 Design Architecture
+        </div>
+        <div className="absolute bottom-8 right-8 text-xs font-mono text-slate-400/60 hidden lg:block">
+          ● RBI DLG Regulated • NPCI UPI Interoperable
+        </div>
+      </div>
+
+      {/* Titanium iPhone Shell Container */}
+      <div className="w-full sm:max-w-[430px] bg-slate-50 min-h-screen sm:min-h-[880px] sm:max-h-[92vh] sm:rounded-[50px] flex flex-col shadow-2xl sm:shadow-[0_25px_80px_rgba(0,0,0,0.55)] sm:ring-1 sm:ring-white/20 sm:border-[8px] sm:border-slate-800/90 relative overflow-hidden">
         
-        {/* Simple Minimal Top Bar */}
-        <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-20">
+        {/* Dynamic Island & Status Bar (Visible on Desktop / Shell) */}
+        <div className="hidden sm:flex items-center justify-between px-7 pt-3 pb-1.5 bg-white/90 backdrop-blur-md select-none text-[11px] font-bold text-slate-900 z-30 shrink-0 border-b border-slate-100/40">
+          <span>9:41</span>
+          {/* Dynamic Island Capsule */}
+          <div className="w-24 h-5 bg-black rounded-full flex items-center justify-center px-2 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-slate-900 ring-1 ring-slate-800" />
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-900">
+            <span className="text-[10px] font-black tracking-tight">5G</span>
+            {/* Battery Pill */}
+            <div className="w-5 h-2.5 rounded-sm border border-slate-800 p-0.5 flex items-center">
+              <div className="w-full h-full bg-slate-900 rounded-xs" />
+            </div>
+          </div>
+        </div>
+
+        {/* Apple Pay Style Header */}
+        <header className="px-5 py-3.5 border-b border-slate-150 bg-white/85 backdrop-blur-xl flex items-center justify-between sticky top-0 z-20 shrink-0">
           {location.pathname === "/" ? (
             <div
               onClick={() => navigate("/profile")}
-              className="flex items-center gap-2.5 cursor-pointer p-1 -m-1 rounded-2xl hover:bg-slate-50 transition"
+              className="flex items-center gap-3 cursor-pointer p-1 -m-1 rounded-2xl hover:bg-slate-50 transition group"
               title="View Profile & Limits"
             >
-              <div className={`w-9 h-9 rounded-full ${currentUser.avatarBg || "bg-[#002855]"} text-white flex items-center justify-center font-bold text-sm shadow-xs`}>
+              <div className={`w-10 h-10 rounded-2xl ${currentUser.avatarBg || "bg-[#0B1528]"} text-white flex items-center justify-center font-black text-sm shadow-md ring-2 ring-slate-100 group-hover:ring-orange-200 transition`}>
                 {currentUser.initials}
               </div>
               <div>
-                <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                <div className="text-sm font-black text-slate-900 flex items-center gap-1.5">
                   <span>{currentUser.fullName}</span>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-full font-semibold">
-                    KYC Verified
+                  <span className="text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-full font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Verified
                   </span>
                 </div>
-                <div className="text-xs text-gray-500 font-mono">{currentUser.vpa}</div>
+                <div className="text-xs text-slate-400 font-mono">{currentUser.vpa}</div>
               </div>
             </div>
           ) : (
             <button
               onClick={() => navigate(-1)}
-              className="p-1 -ml-1 text-gray-700 hover:text-black flex items-center gap-2"
+              className="p-1 -ml-1 text-slate-700 hover:text-black flex items-center gap-2 cursor-pointer transition active:scale-95"
             >
-              <ArrowLeft size={20} />
-              <span className="text-sm font-semibold">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 hover:bg-slate-200 transition">
+                <ArrowLeft size={16} />
+              </div>
+              <span className="text-sm font-bold text-slate-900">
                 {location.pathname === "/scan"
                   ? "Scan QR"
                   : location.pathname === "/pay"
@@ -646,27 +676,27 @@ function App() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowCloudSettings(true)}
-              className={`p-2 rounded-full transition flex items-center justify-center cursor-pointer ${
+              className={`p-2 rounded-xl transition flex items-center justify-center cursor-pointer ${
                 cloudActive
-                  ? "text-emerald-600 hover:bg-emerald-50"
-                  : "text-gray-400 hover:bg-orange-50 hover:text-[#F47920]"
+                  ? "bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-2xs"
+                  : "bg-slate-50 text-slate-400 hover:bg-orange-50 hover:text-[#F47920] border border-slate-200"
               }`}
               title="Configure Firebase Realtime Cloud Sync"
             >
-              <Cloud size={20} />
+              <Cloud size={16} />
             </button>
             <button
               onClick={() => navigate("/qr")}
-              className="p-2 text-gray-600 hover:bg-orange-50 hover:text-[#F47920] rounded-full transition cursor-pointer"
+              className="p-2 bg-slate-50 hover:bg-orange-50 hover:text-[#F47920] text-slate-700 rounded-xl border border-slate-200 transition cursor-pointer"
               title="My QR"
             >
-              <QrCode size={20} />
+              <QrCode size={16} />
             </button>
           </div>
         </header>
 
         {/* View Routing */}
-        <main className="flex-1 px-5 py-5 pb-24">
+        <main className="flex-1 px-4 sm:px-5 py-4 pb-28 overflow-y-auto no-scrollbar">
           {location.pathname === "/" && (
             <HomeView
               credit={credit}
@@ -761,23 +791,60 @@ function App() {
           )}
         </main>
 
-        {/* Bottom 4-Item Minimal Navigation */}
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-2.5 px-3 z-20 shadow-md">
-          {navItems.map(({ path, label, icon: Icon }) => {
-            const active = location.pathname === path;
-            return (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                className={`flex flex-col items-center gap-1 text-xs py-1 px-3 rounded-xl transition ${
-                  active ? "text-[#F47920] font-bold" : "text-gray-500 hover:text-gray-900"
-                }`}
-              >
-                <Icon size={20} className={active ? "text-[#F47920]" : "text-gray-500"} />
-                <span>{label}</span>
-              </button>
-            );
-          })}
+        {/* Floating iOS 18 Frosted Glass Navigation Dock */}
+        <nav className="fixed sm:absolute bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-1.75rem)] max-w-sm bg-white/90 backdrop-blur-2xl border border-slate-200/80 rounded-3xl p-1.5 z-30 shadow-[0_12px_40px_rgba(0,0,0,0.14)] flex items-center justify-between">
+          {/* Home */}
+          <button
+            onClick={() => navigate("/")}
+            className={`flex-1 flex flex-col items-center py-1.5 rounded-2xl transition cursor-pointer ${
+              location.pathname === "/" ? "text-[#F47920] font-black" : "text-slate-400 hover:text-slate-700"
+            }`}
+          >
+            <Building2 size={19} className={location.pathname === "/" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+            <span className="text-[10px] mt-0.5">Home</span>
+          </button>
+
+          {/* Activity / Ledger */}
+          <button
+            onClick={() => navigate("/history")}
+            className={`flex-1 flex flex-col items-center py-1.5 rounded-2xl transition cursor-pointer ${
+              location.pathname === "/history" ? "text-[#F47920] font-black" : "text-slate-400 hover:text-slate-700"
+            }`}
+          >
+            <History size={19} className={location.pathname === "/history" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+            <span className="text-[10px] mt-0.5">Activity</span>
+          </button>
+
+          {/* Center Elevated Radiant Scan Button */}
+          <button
+            onClick={() => navigate("/scan")}
+            className="w-13 h-13 -my-3 rounded-2xl bg-gradient-to-tr from-[#F47920] via-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 active:scale-95 transition cursor-pointer mx-1 shrink-0 border-2 border-white ring-2 ring-orange-200/60"
+            title="Scan Store QR"
+          >
+            <Scan size={24} strokeWidth={2.5} />
+          </button>
+
+          {/* Rewards */}
+          <button
+            onClick={() => navigate("/rewards")}
+            className={`flex-1 flex flex-col items-center py-1.5 rounded-2xl transition cursor-pointer ${
+              location.pathname === "/rewards" ? "text-[#F47920] font-black" : "text-slate-400 hover:text-slate-700"
+            }`}
+          >
+            <Gift size={19} className={location.pathname === "/rewards" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+            <span className="text-[10px] mt-0.5">Rewards</span>
+          </button>
+
+          {/* Profile */}
+          <button
+            onClick={() => navigate("/profile")}
+            className={`flex-1 flex flex-col items-center py-1.5 rounded-2xl transition cursor-pointer ${
+              location.pathname === "/profile" ? "text-[#F47920] font-black" : "text-slate-400 hover:text-slate-700"
+            }`}
+          >
+            <User size={19} className={location.pathname === "/profile" ? "stroke-[2.5]" : "stroke-[1.8]"} />
+            <span className="text-[10px] mt-0.5">Profile</span>
+          </button>
         </nav>
 
         {/* 45-Day Repayment Modal with Timeline Visualizer & Multi-Method Options */}
@@ -930,129 +997,184 @@ function HomeView({
         </div>
       )}
 
-      {/* Primary Credit Card */}
-      <div className="rounded-2xl border border-gray-200 p-5 bg-white shadow-xs">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Buy Now, Pay Later
-          </span>
-          <span className="text-xs font-medium text-gray-500">
-            Limit: {formatRupee(creditLimit)}
-          </span>
+      {/* ==================================================== */}
+      {/* HERO: LUXURY OBSIDIAN PHYSICAL BNPL CREDIT CARD      */}
+      {/* ==================================================== */}
+      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0B0F19] via-[#111827] to-[#1E293B] text-white p-5 sm:p-6 shadow-2xl shadow-slate-900/40 border border-white/10 group transition duration-300">
+        
+        {/* Subtle Card Ambient Sheen / Lighting Aura */}
+        <div className="absolute -right-16 -top-16 w-52 h-52 bg-gradient-to-br from-[#F47920]/30 via-purple-600/15 to-transparent rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition duration-700" />
+        <div className="absolute -left-12 -bottom-12 w-44 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Top Row: Chip + Card Brand */}
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-2.5">
+            {/* Gold EMV Contactless Chip */}
+            <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 p-0.5 shadow-sm flex items-center justify-center">
+              <div className="w-full h-full border border-amber-800/30 rounded-xs grid grid-cols-2 gap-0.5 opacity-85" />
+            </div>
+            {/* Contactless Wave Icon */}
+            <span className="text-white/60 text-xs tracking-widest font-mono">))))</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-extrabold tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-white/10 text-white/90 border border-white/15 backdrop-blur-md">
+              FlexiPay Credit
+            </span>
+            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#F47920] to-amber-400 flex items-center justify-center text-white text-xs font-black shadow-xs">
+              ⚡
+            </div>
+          </div>
         </div>
 
-        <div className="mt-3">
-          <div className="text-3xl font-extrabold text-gray-900 tracking-tight">
+        {/* Middle: Available Credit Highlight */}
+        <div className="mt-4 relative z-10">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Available Credit Line
+            </span>
+            <span className="text-[11px] font-mono text-slate-400">
+              Total Limit: {formatRupee(creditLimit)}
+            </span>
+          </div>
+          <div className="text-3xl sm:text-4xl font-black text-white tracking-tight mt-1">
             {formatRupee(credit)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Available to spend at any store QR</div>
+          <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-semibold mt-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>0% Interest for 45 Days • Instant QR Tap</span>
+          </div>
         </div>
 
-        {used > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-            <div>
-              <div className="text-xs text-gray-500 flex items-center gap-1.5">
-                <span>Current bill (45-Day Cycle)</span>
-                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                  {getBillingCycleDetails().daysLeft} days grace left
-                </span>
-              </div>
-              <div className="text-sm font-bold text-gray-900 mt-0.5">
-                {formatRupee(used)} • {getBillingCycleDetails().fullDueLabel} (0% Interest)
-              </div>
-            </div>
+        {/* Dynamic Real-time Utilization Bar */}
+        <div className="mt-4 relative z-10 space-y-1.5">
+          <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden backdrop-blur-xs p-0.5">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 transition-all duration-500 shadow-sm"
+              style={{ width: `${Math.min(100, Math.max(5, (credit / creditLimit) * 100))}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+            <span>Spent: {formatRupee(used)}</span>
+            <span className="text-amber-300 font-bold">
+              {getBillingCycleDetails().daysLeft} Days Grace Left
+            </span>
+          </div>
+        </div>
+
+        {/* Card Actions: Pay at Store & Repay Bill */}
+        <div className="mt-4 pt-3.5 border-t border-white/10 flex items-center gap-2.5 relative z-10">
+          <button
+            onClick={() => navigate("/scan")}
+            className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#F47920] to-[#E06710] hover:from-[#E06710] hover:to-[#C85608] text-white font-extrabold text-xs shadow-lg shadow-orange-500/25 transition active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Scan size={14} />
+            <span>Scan &amp; Pay Later</span>
+          </button>
+
+          {used > 0 ? (
             <button
               onClick={onRepayClick}
-              className="px-4 py-1.5 text-xs font-semibold text-[#F47920] border border-[#F47920] rounded-full hover:bg-orange-50 transition cursor-pointer"
+              className="py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-xs backdrop-blur-md transition active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
             >
-              Pay bill
+              <span>Repay Bill</span>
             </button>
-          </div>
-        )}
+          ) : (
+            <button
+              onClick={() => navigate("/history")}
+              className="py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white/80 font-bold text-xs backdrop-blur-md transition active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>Statement</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* 4 Action Grid */}
+      {/* 4 Action Grid (Apple Pay / GPay High Polish) */}
       <div className="grid grid-cols-4 gap-2 text-center pt-1">
         <button
           onClick={() => navigate("/scan")}
-          className="flex flex-col items-center gap-2 group"
+          className="flex flex-col items-center gap-1.5 group cursor-pointer active:scale-95 transition"
         >
-          <div className="w-13 h-13 rounded-full bg-orange-50 text-[#F47920] flex items-center justify-center group-hover:bg-orange-100 transition">
-            <Scan size={22} />
+          <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#F47920] to-orange-400 text-white flex items-center justify-center shadow-md shadow-orange-500/20 group-hover:scale-105 transition">
+            <Scan size={22} strokeWidth={2.3} />
           </div>
-          <span className="text-xs font-medium text-gray-800">Scan QR</span>
+          <span className="text-xs font-bold text-slate-800">Scan QR</span>
         </button>
 
         <button
           onClick={() => navigate("/scan")}
-          className="flex flex-col items-center gap-2 group"
+          className="flex flex-col items-center gap-1.5 group cursor-pointer active:scale-95 transition"
         >
-          <div className="w-13 h-13 rounded-full bg-gray-50 text-gray-700 flex items-center justify-center group-hover:bg-gray-100 transition">
-            <Building2 size={22} />
+          <div className="w-13 h-13 rounded-2xl bg-white text-slate-800 border border-slate-200/80 shadow-xs flex items-center justify-center group-hover:border-slate-300 group-hover:bg-slate-50 transition">
+            <Building2 size={22} className="text-slate-700" />
           </div>
-          <span className="text-xs font-medium text-gray-800">Pay Store</span>
+          <span className="text-xs font-bold text-slate-800">Pay Store</span>
         </button>
 
         <button
           onClick={() => navigate("/rewards")}
-          className="flex flex-col items-center gap-2 group"
+          className="flex flex-col items-center gap-1.5 group cursor-pointer active:scale-95 transition"
         >
-          <div className="w-13 h-13 rounded-full bg-gray-50 text-gray-700 flex items-center justify-center group-hover:bg-gray-100 transition">
-            <Gift size={22} />
+          <div className="w-13 h-13 rounded-2xl bg-white text-amber-600 border border-slate-200/80 shadow-xs flex items-center justify-center group-hover:border-amber-200 group-hover:bg-amber-50/50 transition">
+            <Gift size={22} className="text-amber-500" />
           </div>
-          <span className="text-xs font-medium text-gray-800">Rewards</span>
+          <span className="text-xs font-bold text-slate-800">Rewards</span>
         </button>
 
         <button
           onClick={() => navigate("/qr")}
-          className="flex flex-col items-center gap-2 group"
+          className="flex flex-col items-center gap-1.5 group cursor-pointer active:scale-95 transition"
         >
-          <div className="w-13 h-13 rounded-full bg-gray-50 text-gray-700 flex items-center justify-center group-hover:bg-gray-100 transition">
-            <QrCode size={22} />
+          <div className="w-13 h-13 rounded-2xl bg-white text-indigo-600 border border-slate-200/80 shadow-xs flex items-center justify-center group-hover:border-indigo-200 group-hover:bg-indigo-50/50 transition">
+            <QrCode size={22} className="text-indigo-600" />
           </div>
-          <span className="text-xs font-medium text-gray-800">My QR</span>
+          <span className="text-xs font-bold text-slate-800">My QR</span>
         </button>
       </div>
 
-      {/* Clean Store Offer Banner - Synced with Merchant Campaign */}
-      <div className="p-4 rounded-xl border border-orange-100 bg-orange-50/50 flex items-center justify-between">
+      {/* Sleek Store Offer Banner - Synced with Merchant Campaign */}
+      <div className="relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100/60 border border-orange-200/80 shadow-xs flex items-center justify-between group">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-[#F47920] text-white flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#F47920] to-amber-500 text-white flex items-center justify-center shadow-sm shrink-0">
             <Tag size={18} />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-gray-900 truncate">
-              {activeOffer?.title || "Sharma Super Store Offer"}
+            <div className="text-xs font-black text-slate-900 truncate flex items-center gap-1.5">
+              <span>{activeOffer?.title || "Sharma Super Store Offer"}</span>
+              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-orange-500 text-white">
+                Live
+              </span>
             </div>
-            <div className="text-[11px] text-gray-600 truncate">
+            <div className="text-[11px] text-slate-600 truncate mt-0.5">
               {activeOffer?.subtitle || "Flat 10% Cashback on Pay Later"}
             </div>
           </div>
         </div>
         <button
           onClick={() => navigate("/scan")}
-          className="px-3 py-1.5 text-xs font-semibold bg-white border border-orange-200 text-[#F47920] rounded-lg hover:bg-orange-50 shrink-0 ml-2"
+          className="px-3.5 py-1.5 text-xs font-extrabold bg-[#F47920] text-white rounded-xl shadow-xs hover:bg-[#E06710] transition active:scale-95 shrink-0 ml-2 cursor-pointer"
         >
-          Scan
+          Claim &gt;
         </button>
       </div>
 
-      {/* Recent Merchants */}
+      {/* Frequent Stores (Google Pay / PhonePe Circular Hub) */}
       <div>
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2.5">
           Frequent Stores
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
           {people.map((p, i) => (
             <button
               key={i}
               onClick={() => navigate("/scan")}
-              className="flex flex-col items-center gap-1.5 min-w-[64px]"
+              className="flex flex-col items-center gap-1.5 min-w-[66px] cursor-pointer group active:scale-95 transition"
             >
-              <div className="w-13 h-13 rounded-full bg-gray-100 text-gray-800 flex items-center justify-center font-semibold text-sm hover:ring-2 hover:ring-[#F47920] transition">
+              <div className="w-13 h-13 rounded-2xl bg-white text-slate-900 border border-slate-200 shadow-xs flex items-center justify-center font-black text-sm group-hover:border-[#F47920] group-hover:shadow-md transition">
                 {p.initials}
               </div>
-              <span className="text-xs text-gray-700 font-medium truncate max-w-[68px]">
+              <span className="text-[11px] text-slate-700 font-bold truncate max-w-[68px]">
                 {p.name}
               </span>
             </button>
@@ -1060,62 +1182,62 @@ function HomeView({
         </div>
       </div>
 
-      {/* Clean Transaction List */}
+      {/* Apple Wallet Style Transaction Ledger */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
             Recent Activity
           </span>
           <button
             onClick={() => navigate("/history")}
-            className="text-xs font-semibold text-[#F47920] hover:underline"
+            className="text-xs font-extrabold text-[#F47920] hover:underline cursor-pointer"
           >
-            See all
+            View All
           </button>
         </div>
 
         {(!transactions || transactions.length === 0) ? (
-          <div className="p-5 text-center rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 my-2">
-            <div className="w-10 h-10 rounded-full bg-orange-50 text-[#F47920] flex items-center justify-center mx-auto mb-2 text-sm font-bold shadow-xs">
+          <div className="p-6 text-center rounded-2xl border border-dashed border-slate-200 bg-white shadow-2xs my-2">
+            <div className="w-10 h-10 rounded-2xl bg-orange-50 text-[#F47920] flex items-center justify-center mx-auto mb-2 text-sm font-bold shadow-xs">
               ⚡
             </div>
-            <div className="text-xs font-bold text-gray-800">No Transactions Yet</div>
-            <p className="text-[11px] text-gray-500 mt-0.5 max-w-xs mx-auto">
+            <div className="text-xs font-black text-slate-900">No Transactions Yet</div>
+            <p className="text-[11px] text-slate-500 mt-0.5 max-w-xs mx-auto">
               Scan any merchant UPI QR to make your first payment using your 0% interest FlexiPay line!
             </p>
             <button
               onClick={() => navigate("/scan")}
-              className="mt-3 px-4 py-2 bg-[#F47920] hover:bg-[#E06710] text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              className="mt-3 px-4 py-2 bg-[#F47920] hover:bg-[#E06710] text-white text-xs font-black rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
             >
               Scan &amp; Pay Now →
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="space-y-2">
             {transactions.slice(0, 4).map((tx) => (
               <div
                 key={tx.id}
                 onClick={() => onSelectTx(tx)}
-                className="py-3.5 flex items-center justify-between cursor-pointer hover:bg-gray-50/60 -mx-2 px-2 rounded-xl transition"
+                className="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between cursor-pointer hover:border-slate-300 hover:shadow-xs transition active:scale-[0.99]"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center text-xs font-black shrink-0 border border-slate-200/60">
                     {tx.initials || "TX"}
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 leading-tight">
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-900 truncate">
                       {tx.merchant}
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">{tx.date}</div>
+                    <div className="text-[10px] text-slate-400 font-medium mt-0.5">{tx.date}</div>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <div className="text-sm font-bold text-gray-900">
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-black text-slate-900">
                     -{formatRupee(tx.amount)}
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">
-                    {(tx.mode || "").includes("Later") ? "Pay Later" : "Bank UPI"}
+                  <div className="text-[10px] font-bold text-emerald-700 mt-0.5">
+                    {(tx.mode || "").includes("Later") ? "Pay Later (0%)" : "Bank UPI"}
                   </div>
                 </div>
               </div>

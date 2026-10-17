@@ -670,55 +670,54 @@ function MerchantTerminal({ currentMerchant, onLogout }) {
       {/* ---------------------------------------------------- */}
       {/* RESPONSIVE TOP HEADER                                */}
       {/* ---------------------------------------------------- */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-3">
+      {/* ---------------------------------------------------- */}
+      {/* MAANG-TIER COMMAND HEADER (Stripe / Square Terminal) */}
+      {/* ---------------------------------------------------- */}
+      <header className="bg-slate-950 border-b border-slate-800 text-white sticky top-0 z-30 shadow-xl">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           
-          {/* Store Branding (Strict Private Terminal Isolation) */}
-          <div
-            className="flex items-center gap-2.5 sm:gap-3 min-w-0 p-1 -m-1"
-          >
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
+          {/* Store Branding (Private Terminal Isolation) */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-[#F47920] to-amber-500 text-white flex items-center justify-center font-black text-base sm:text-lg shadow-md shadow-orange-500/20 shrink-0 border border-white/10">
               {currentMerchant.name ? currentMerchant.name[0] : "S"}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-sm sm:text-base font-black text-white tracking-tight truncate">
                   {currentMerchant.name}
                 </h1>
-                <span className="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.2 rounded-full border border-emerald-200 shrink-0">
-                  <ShieldCheck size={11} className="text-emerald-600" /> Verified
+                <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Verified POS
                 </span>
               </div>
               
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate mt-0.5">
+              <div className="flex items-center gap-2 text-xs text-slate-400 truncate mt-0.5">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopyVpa();
-                  }}
-                  className="font-mono text-[#F47920] hover:text-[#E06710] flex items-center gap-0.5 cursor-pointer shrink-0"
+                  onClick={handleCopyVpa}
+                  className="font-mono text-orange-400 hover:text-orange-300 flex items-center gap-1 cursor-pointer shrink-0 transition"
                   title="Click to copy UPI ID"
                 >
                   <span>{currentMerchant.vpa}</span>
-                  <Copy size={10} />
+                  <Copy size={11} />
                 </button>
-                {copiedVpa && <span className="text-emerald-600 font-bold text-[10px]">Copied!</span>}
-                <span className="hidden sm:inline">• GSTIN: {currentMerchant.gstin || "27AABCU9603R1ZM"}</span>
+                {copiedVpa && <span className="text-emerald-400 font-bold text-[10px]">Copied!</span>}
+                <span className="hidden sm:inline text-slate-600">• GSTIN: {currentMerchant.gstin || "27AABCU9603R1ZM"}</span>
               </div>
             </div>
           </div>
 
-          {/* Right Header Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Right Header Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             
-            {/* Interactive Soundbox Control */}
-            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 gap-1">
+            {/* Interactive Soundbox Control Pill */}
+            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-2xl p-1 gap-1">
               <button
                 onClick={() => setSoundboxEnabled((prev) => !prev)}
-                className={`p-1.5 sm:px-2 sm:py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1 cursor-pointer ${
+                className={`p-1.5 sm:px-2.5 sm:py-1 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                   soundboxEnabled
                     ? "bg-[#F47920] text-white shadow-xs"
-                    : "bg-transparent text-slate-400"
+                    : "bg-transparent text-slate-500 hover:text-slate-300"
                 }`}
                 title="Toggle Soundbox Speaker"
               >
@@ -730,24 +729,24 @@ function MerchantTerminal({ currentMerchant, onLogout }) {
                 <>
                   <button
                     onClick={cycleVoice}
-                    className={`px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold rounded-md transition cursor-pointer flex items-center gap-1 ${
+                    className={`px-2 py-1 text-[11px] font-bold rounded-lg transition cursor-pointer flex items-center gap-1 ${
                       voiceLang === "hi-standard"
-                        ? "bg-orange-100 text-[#F47920] border border-orange-300 shadow-2xs"
+                        ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
                         : voiceLang === "hi-ab"
-                        ? "bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs"
-                        : "text-slate-600 hover:bg-slate-200/60"
+                        ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                        : "text-slate-400 hover:text-white"
                     }`}
-                    title="Switch voice: Standard Hindi (Default), AB Hindi (Simulated), English"
+                    title="Switch voice: Standard Hindi, AB Hindi, English"
                   >
                     {voiceLang === "hi-standard"
-                      ? "🗣️ हिंदी (Standard)"
+                      ? "🗣️ Standard"
                       : voiceLang === "hi-ab"
                       ? "🎙️ AB (हिंदी)"
                       : "🇬🇧 English"}
                   </button>
                   <button
                     onClick={() => announceSoundbox(amount || 2500)}
-                    className="px-2 py-1 text-[11px] font-semibold text-[#F47920] hover:bg-orange-50 rounded-md transition cursor-pointer flex items-center gap-1"
+                    className="px-2 py-1 text-[11px] font-bold text-orange-400 hover:text-orange-300 rounded-lg transition cursor-pointer flex items-center gap-1"
                     title="Test Voice Announcement"
                   >
                     <Volume2 size={13} />
@@ -757,66 +756,66 @@ function MerchantTerminal({ currentMerchant, onLogout }) {
               )}
             </div>
 
-            {/* Cloud Sync Button */}
+            {/* Cloud Sync Status */}
             <button
               onClick={() => setShowCloudSettings(true)}
-              className={`px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold rounded-xl border transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1.5 text-xs font-bold rounded-2xl border transition flex items-center gap-1.5 cursor-pointer ${
                 cloudActive
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                  : "bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800"
               }`}
               title="Configure Firebase Realtime Cloud Sync"
             >
-              <Cloud size={14} className={cloudActive ? "text-emerald-600" : "text-slate-400"} />
+              <Cloud size={14} className={cloudActive ? "text-emerald-400" : "text-slate-500"} />
               <span className="hidden sm:inline">{cloudActive ? "Cloud Live" : "Cloud Sync"}</span>
             </button>
 
-            {/* Staff Role Switcher (Owner vs Cashier) */}
+            {/* Staff Role Switcher */}
             <button
               onClick={toggleMerchantRole}
-              className={`px-2 sm:px-2.5 py-1 text-[11px] font-bold rounded-xl border transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1.5 text-[11px] font-black rounded-2xl border transition flex items-center gap-1 cursor-pointer ${
                 merchantRole === "owner"
-                  ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
-                  : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                  ? "bg-white text-slate-950 border-white shadow-xs"
+                  : "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
               }`}
               title="Click to toggle Cashier Mode vs Store Owner Mode"
             >
               <span>{merchantRole === "owner" ? "👑 Owner" : "🧑‍💼 Cashier"}</span>
             </button>
 
+            {/* Bank Payout Badge (Desktop Only) */}
+            <div
+              onClick={() => {
+                if (merchantRole === "owner") setSettleModalOpen(true);
+              }}
+              className={`hidden lg:flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl transition ${
+                merchantRole === "owner" ? "cursor-pointer hover:border-slate-700" : "opacity-75"
+              }`}
+              title={merchantRole === "owner" ? "Click to view Settlement breakdown" : "Settlement locked in Cashier mode"}
+            >
+              <Building2 size={14} className="text-slate-400" />
+              <div className="text-left">
+                <div className="text-[9px] text-slate-500 leading-tight">Settlement A/C</div>
+                <div className="text-xs font-bold text-slate-200 leading-tight">
+                  {(currentMerchant.bank?.bankName || "HDFC Bank").split(" ")[0]} {currentMerchant.bank?.maskedAccount || "•••• 9921"}
+                </div>
+              </div>
+            </div>
+
             {/* Logout Store Terminal Button */}
             <button
               onClick={onLogout}
-              className="px-2 sm:px-2.5 py-1 text-[11px] font-bold rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-1.5 text-[11px] font-bold rounded-2xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center gap-1 cursor-pointer"
               title="Logout of this store's private terminal"
             >
               <LogOut size={13} />
               <span className="hidden sm:inline">Logout Store</span>
             </button>
-
-            {/* Bank Badge (Desktop Only) */}
-            <div
-              onClick={() => {
-                if (merchantRole === "owner") setSettleModalOpen(true);
-              }}
-              className={`hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl transition ${
-                merchantRole === "owner" ? "cursor-pointer hover:bg-slate-100" : "opacity-75"
-              }`}
-              title={merchantRole === "owner" ? "Click to view Settlement breakdown" : "Settlement locked in Cashier mode"}
-            >
-              <Building2 size={14} className="text-slate-500" />
-              <div className="text-left">
-                <div className="text-[10px] text-slate-400 leading-tight">Settlement</div>
-                <div className="text-xs font-bold text-slate-800 leading-tight">
-                  {(currentMerchant.bank?.bankName || "HDFC Bank").split(" ")[0]} {currentMerchant.bank?.maskedAccount || "•••• 9921"}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Desktop Navigation Tabs (Hidden on Mobile) */}
-        <div className="hidden md:flex max-w-6xl mx-auto px-6 gap-2 border-t border-slate-100 text-sm overflow-x-auto no-scrollbar">
+        {/* Desktop Segmented Navigation Tabs */}
+        <div className="hidden md:flex max-w-6xl mx-auto px-6 gap-1.5 border-t border-slate-800/80 text-xs py-1.5 overflow-x-auto no-scrollbar">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
@@ -824,13 +823,13 @@ function MerchantTerminal({ currentMerchant, onLogout }) {
               <button
                 key={item.id}
                 onClick={() => setTab(item.id)}
-                className={`py-3 px-3.5 font-medium transition border-b-2 -mb-[1px] whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                className={`py-2 px-3.5 font-bold rounded-xl transition whitespace-nowrap flex items-center gap-2 cursor-pointer ${
                   active
-                    ? "border-[#F47920] text-[#F47920] font-bold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
+                    ? "bg-[#F47920] text-white shadow-md shadow-orange-500/20"
+                    : "text-slate-400 hover:text-white hover:bg-slate-900"
                 }`}
               >
-                <Icon size={16} />
+                <Icon size={15} />
                 <span>{item.label}</span>
               </button>
             );
