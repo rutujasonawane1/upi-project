@@ -161,6 +161,21 @@ function App() {
   const [showCloudSettings, setShowCloudSettings] = useState(false);
   const [cloudActive, setCloudActive] = useState(isFirebaseActive());
 
+  // Role Mode: "owner" (Full access: settlements, bank settings, loans) vs "cashier" (Billing + Soundbox only)
+  const [merchantRole, setMerchantRole] = useState(() => {
+    return localStorage.getItem("flexiMerchantRole") || "owner";
+  });
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
+  const [settleHistory, setSettleHistory] = useState([
+    { id: "set_9821", amount: 12500, fee: 25, net: 12475, type: "T+0 Instant", time: "Yesterday, 6:45 PM", status: "Transferred" }
+  ]);
+
+  const toggleMerchantRole = () => {
+    const next = merchantRole === "owner" ? "cashier" : "owner";
+    setMerchantRole(next);
+    localStorage.setItem("flexiMerchantRole", next);
+  };
+
   // Auto scroll to top on tab change so features are instantly visible without scrolling
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -504,8 +519,11 @@ function App() {
   };
 
   const handleInstantSettle = () => {
-    setSettledToast(true);
-    setTimeout(() => setSettledToast(false), 3000);
+    if (merchantRole === "cashier") {
+      alert("Permission Denied: Cashier accounts cannot initiate bank payouts. Switch to Owner role.");
+      return;
+    }
+    setSettleModalOpen(true);
   };
 
   const [merchantCreditLimit, setMerchantCreditLimit] = useState(150000);
@@ -626,8 +644,29 @@ function App() {
               <span className="hidden sm:inline">{cloudActive ? "Cloud Live" : "Cloud Sync"}</span>
             </button>
 
+            {/* Staff Role Switcher (Owner vs Cashier) */}
+            <button
+              onClick={toggleMerchantRole}
+              className={`px-2 sm:px-2.5 py-1 text-[11px] font-bold rounded-xl border transition flex items-center gap-1 cursor-pointer ${
+                merchantRole === "owner"
+                  ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                  : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+              }`}
+              title="Click to toggle Cashier Mode vs Store Owner Mode"
+            >
+              <span>{merchantRole === "owner" ? "👑 Owner" : "🧑‍💼 Cashier"}</span>
+            </button>
+
             {/* Bank Badge (Desktop Only) */}
-            <div className="hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+            <div
+              onClick={() => {
+                if (merchantRole === "owner") setSettleModalOpen(true);
+              }}
+              className={`hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl transition ${
+                merchantRole === "owner" ? "cursor-pointer hover:bg-slate-100" : "opacity-75"
+              }`}
+              title={merchantRole === "owner" ? "Click to view Settlement breakdown" : "Settlement locked in Cashier mode"}
+            >
               <Building2 size={14} className="text-slate-500" />
               <div className="text-left">
                 <div className="text-[10px] text-slate-400 leading-tight">Settlement</div>
@@ -731,14 +770,20 @@ function App() {
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
                   <span className="text-xs text-slate-700">
-                    <strong className="font-semibold text-slate-900">Auto-Settlement:</strong> Tomorrow 7:00 AM to HDFC Bank (•••• 9921)
+                    <strong className="font-semibold text-slate-900">Auto-Settlement:</strong> Tomorrow 7:00 AM (T+1 Free) or Instant T+0
                   </span>
                 </div>
                 <button
                   onClick={handleInstantSettle}
-                  className="self-stretch sm:self-auto text-center px-3 py-1.5 text-xs font-bold bg-white border border-orange-200 text-[#F47920] rounded-lg hover:bg-orange-100/50 transition cursor-pointer"
+                  className={`self-stretch sm:self-auto text-center px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    merchantRole === "owner"
+                      ? "bg-[#F47920] hover:bg-[#E06710] text-white shadow-xs"
+                      : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                  }`}
+                  title={merchantRole === "owner" ? "Open Settlement & Payout breakdown" : "Cashier cannot initiate bank settlements"}
                 >
-                  Settle to Bank Now (Free)
+                  <Building2 size={13} />
+                  <span>{merchantRole === "owner" ? "Instant Settle to Bank" : "Settle Locked (Cashier)"}</span>
                 </button>
               </div>
 
@@ -1292,6 +1337,141 @@ function App() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* ENTERPRISE MERCHANT SETTLEMENT MODAL (T+0 vs T+1)     */}
+      {/* ---------------------------------------------------- */}
+      {settleModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4"
+          onClick={() => setSettleModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl animate-tab-enter max-h-[92vh] overflow-y-auto my-auto space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-[#F47920] flex items-center justify-center font-bold">
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">Bank Payout Settlement</h3>
+                  <p className="text-[11px] text-slate-500">Sharma Super Store • HDFC A/C •••• 9921</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSettleModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Current Ledger Balance */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white space-y-1">
+              <span className="text-[11px] text-slate-300 font-medium">Unsettled Gross Balance</span>
+              <div className="text-3xl font-black">{formatRupee(sales)}</div>
+              <div className="text-[10px] text-emerald-400 flex items-center gap-1 pt-1">
+                <CheckCircle2 size={12} />
+                <span>Verified across {transactions.length} customer collections</span>
+              </div>
+            </div>
+
+            {/* Payout Options: T+1 vs T+0 */}
+            <div className="space-y-2.5 text-xs">
+              <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider">Choose Settlement Speed</span>
+
+              {/* T+1 Standard (Free) */}
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>Standard Payout (T+1)</span>
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                      Zero Fee
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Tomorrow at 7:00 AM • Direct NEFT/RTGS</div>
+                </div>
+                <span className="font-black text-slate-900">{formatRupee(sales)}</span>
+              </div>
+
+              {/* T+0 Instant Settlement (Real World 0.20% IMPS Fee) */}
+              <div className="p-3.5 rounded-xl border-2 border-[#F47920] bg-orange-50/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>Instant Payout (T+0 IMPS)</span>
+                      <span className="text-[9px] font-bold text-[#F47920] bg-white px-1.5 py-0.2 rounded border border-orange-200">
+                        Within 15 Seconds
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">Immediate credit to HDFC A/C ending in 9921</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-black text-[#F47920]">{formatRupee(Math.max(0, sales - Math.round(sales * 0.002)))}</div>
+                    <div className="text-[10px] text-slate-400">Net to bank</div>
+                  </div>
+                </div>
+
+                {/* Deductions Breakdown */}
+                <div className="p-2.5 bg-white/80 rounded-xl border border-orange-200/80 text-[11px] space-y-1">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Gross Amount:</span>
+                    <span>{formatRupee(sales)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Instant IMPS Switch Fee (0.20%):</span>
+                    <span>-{formatRupee(Math.round(sales * 0.002))}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>MDR on FlexiPay (0% Promo):</span>
+                    <span className="text-emerald-700 font-semibold">₹0.00 (Waived)</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-slate-900 border-t border-slate-100 pt-1">
+                    <span>Net Transfer Amount:</span>
+                    <span className="text-[#F47920]">{formatRupee(Math.max(0, sales - Math.round(sales * 0.002)))}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Execute Instant Settle Action */}
+            <div className="pt-2 space-y-2">
+              <button
+                disabled={sales <= 0}
+                onClick={() => {
+                  const fee = Math.round(sales * 0.002);
+                  const net = Math.max(0, sales - fee);
+                  const newEntry = {
+                    id: "set_" + Date.now(),
+                    amount: sales,
+                    fee,
+                    net,
+                    type: "T+0 Instant",
+                    time: "Just now",
+                    status: "Transferred"
+                  };
+                  setSettleHistory((prev) => [newEntry, ...prev]);
+                  setSales(0);
+                  setSettleModalOpen(false);
+                  setSettledToast(true);
+                  setTimeout(() => setSettledToast(false), 4500);
+                }}
+                className="w-full py-3 bg-[#F47920] hover:bg-[#E06710] disabled:opacity-50 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-2"
+              >
+                <Building2 size={16} />
+                <span>Confirm Instant Payout ({formatRupee(Math.max(0, sales - Math.round(sales * 0.002)))})</span>
+              </button>
+              <p className="text-[10px] text-center text-slate-400">
+                Complies with RBI Master Directions on Payment Aggregators & Merchant Settlements
+              </p>
             </div>
           </div>
         </div>,

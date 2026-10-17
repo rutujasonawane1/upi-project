@@ -161,6 +161,43 @@ function formatRupee(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
 }
 
+// ----------------------------------------------------
+// DYNAMIC 45-DAY BILLING CYCLE HELPER (RBI DLG Compliant)
+// Cycle: Current Month Spend -> Statement on 1st -> Grace Due on 15th (up to 45 Days)
+// ----------------------------------------------------
+export function getBillingCycleDetails() {
+  const now = new Date();
+  const currentDay = now.getDate();
+  const currentMonth = now.getMonth(); // 0-indexed
+  const currentYear = now.getFullYear();
+
+  // Due date is always 15th of NEXT month (grace period)
+  const nextMonth = new Date(currentYear, currentMonth + 1, 15);
+  const dueFormatted = nextMonth.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short"
+  });
+
+  const statementDate = new Date(currentYear, currentMonth + 1, 1).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short"
+  });
+
+  // Days remaining until grace deadline
+  const timeDiff = nextMonth.getTime() - now.getTime();
+  const daysLeft = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
+  const dayInCycle = Math.min(45, Math.max(1, currentDay + 15));
+
+  return {
+    statementDate,
+    dueDate: dueFormatted,
+    fullDueLabel: `Due ${dueFormatted}`,
+    daysLeft,
+    dayInCycle,
+    cycleLength: 45
+  };
+}
+
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -832,8 +869,15 @@ function HomeView({ credit, creditLimit, transactions, points, activeOffer, navi
         {used > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
             <div>
-              <div className="text-xs text-gray-500">Current bill (45-Day Cycle)</div>
-              <div className="text-sm font-bold text-gray-900">{formatRupee(used)} • Due 30 Nov (0% Fee)</div>
+              <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                <span>Current bill (45-Day Cycle)</span>
+                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                  {getBillingCycleDetails().daysLeft} days grace left
+                </span>
+              </div>
+              <div className="text-sm font-bold text-gray-900 mt-0.5">
+                {formatRupee(used)} • {getBillingCycleDetails().fullDueLabel} (0% Interest)
+              </div>
             </div>
             <button
               onClick={onRepayClick}
@@ -1508,7 +1552,9 @@ function SuccessView({ amount, merchant, vpa, method, navigate }) {
         {method === "later" && (
           <div className="flex justify-between">
             <span className="text-gray-500">Repayment Cycle</span>
-            <span className="font-semibold text-emerald-700">45 Days (Due 30 Nov 2026)</span>
+            <span className="font-semibold text-emerald-700">
+              45 Days ({getBillingCycleDetails().fullDueLabel})
+            </span>
           </div>
         )}
         <div className="flex justify-between border-t border-gray-200/60 pt-2">
@@ -1716,9 +1762,11 @@ function ProfileView({ currentUser, onLogout, credit, creditLimit, points, onRep
         <div>
           <div className="text-[11px] text-gray-500">Current FlexiPay Bill (45-Day Cycle)</div>
           <div className="text-sm sm:text-base font-bold text-gray-900 mt-0.5">
-            {formatRupee(creditLimit - credit)} • Due 30 Nov
+            {formatRupee(creditLimit - credit)} • {getBillingCycleDetails().fullDueLabel}
           </div>
-          <div className="text-[10px] text-emerald-700 font-medium">0% interest if paid on or before due date</div>
+          <div className="text-[10px] text-emerald-700 font-medium">
+            0% interest if paid on or before due date • {getBillingCycleDetails().daysLeft} days remaining
+          </div>
         </div>
         {creditLimit - credit > 0 && (
           <button
@@ -2224,17 +2272,25 @@ function ConsumerRepayModal({ dueAmount, onClose, onConfirm }) {
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
               <div className="flex justify-between text-[11px] font-semibold text-slate-700">
                 <span>Day 0</span>
-                <span className="text-[#F47920] font-bold">Day 32 (Today)</span>
-                <span>Day 45 (Due)</span>
+                <span className="text-[#F47920] font-bold">Day {getBillingCycleDetails().dayInCycle} (Today)</span>
+                <span>Day 45 ({getBillingCycleDetails().dueDate})</span>
               </div>
               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#F47920] h-full rounded-full" style={{ width: "71%" }}></div>
+                <div
+                  className="bg-[#F47920] h-full rounded-full transition-all"
+                  style={{ width: `${Math.round((getBillingCycleDetails().dayInCycle / 45) * 100)}%` }}
+                ></div>
               </div>
               <div className="flex items-center justify-between text-[10px] text-slate-500">
-                <span>⏳ <strong>13 days remaining</strong> in grace cycle</span>
+                <span>⏳ <strong>{getBillingCycleDetails().daysLeft} days remaining</strong> in 0% grace cycle</span>
                 <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   0% Interest
                 </span>
+              </div>
+              {/* RBI Transparency: Late Fee & Bureau Notice */}
+              <div className="pt-1 border-t border-slate-200/60 text-[10px] text-slate-500 flex items-center justify-between">
+                <span>After {getBillingCycleDetails().dueDate}: ₹100 flat late fee</span>
+                <span className="text-slate-400">Reports to CIBIL / Experian on 30+ DPD</span>
               </div>
             </div>
 
