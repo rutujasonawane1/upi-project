@@ -268,6 +268,7 @@ function App() {
   const [aaModal, setAaModal] = useState(false);
   const [showCloudSettings, setShowCloudSettings] = useState(false);
   const [cloudActive, setCloudActive] = useState(isFirebaseActive());
+  const [detectedBill, setDetectedBill] = useState(null);
 
   const handleLogout = () => {
     try {
@@ -325,7 +326,10 @@ function App() {
             });
           }
           if (type === "POS_BILL_GENERATED" && payload) {
-            if (payload.amount) setAmount(Number(payload.amount));
+            if (payload.amount) {
+              setAmount(Number(payload.amount));
+              setDetectedBill(payload);
+            }
             if (payload.merchant) setMerchant(payload.merchant);
             if (payload.vpa) setVpa(payload.vpa);
           }
@@ -351,7 +355,10 @@ function App() {
       if (e.key === "flexiPosBill" && e.newValue) {
         try {
           const bill = JSON.parse(e.newValue);
-          if (bill.amount) setAmount(Number(bill.amount));
+          if (bill.amount) {
+            setAmount(Number(bill.amount));
+            setDetectedBill(bill);
+          }
           if (bill.merchant) setMerchant(bill.merchant);
           if (bill.vpa) setVpa(bill.vpa);
         } catch (err) {
@@ -383,6 +390,7 @@ function App() {
       console.log("[Consumer Firebase Bill Received]", bill);
       if (bill && bill.amount) {
         setAmount(Number(bill.amount));
+        setDetectedBill(bill);
         if (bill.merchant) setMerchant(bill.merchant);
         if (bill.vpa) setVpa(bill.vpa);
       }
@@ -666,9 +674,17 @@ function App() {
               transactions={transactions}
               points={points}
               activeOffer={activeOffer}
+              detectedBill={detectedBill}
+              onClearDetectedBill={() => setDetectedBill(null)}
               navigate={navigate}
               onSelectTx={(tx) => setSelectedTx(tx)}
               onRepayClick={() => setRepayModal(true)}
+              onPayDetectedBill={(b) => {
+                setAmount(Number(b.amount));
+                setMerchant(b.merchant || "Sharma Super Store");
+                setVpa(b.vpa || "sharma@flexipay");
+                navigate("/pay");
+              }}
             />
           )}
 
@@ -853,7 +869,19 @@ function App() {
 // ----------------------------------------------------
 // HOME VIEW
 // ----------------------------------------------------
-function HomeView({ credit, creditLimit, transactions, points, activeOffer, navigate, onSelectTx, onRepayClick }) {
+function HomeView({
+  credit,
+  creditLimit,
+  transactions,
+  points,
+  activeOffer,
+  detectedBill,
+  onClearDetectedBill,
+  onPayDetectedBill,
+  navigate,
+  onSelectTx,
+  onRepayClick
+}) {
   const used = creditLimit - credit;
 
   const people = [
@@ -865,7 +893,43 @@ function HomeView({ credit, creditLimit, transactions, points, activeOffer, navi
 
   return (
     <div className="space-y-6">
-      
+      {/* Live POS Counter Bill Instant Banner */}
+      {detectedBill && detectedBill.amount && (
+        <div className="p-4 bg-gradient-to-r from-orange-500 via-[#F47920] to-[#E06710] text-white rounded-2xl shadow-lg flex items-center justify-between gap-3 animate-tab-enter border border-orange-400/40">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-3 h-3 rounded-full bg-white animate-ping shrink-0"></span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] uppercase tracking-wider font-extrabold bg-black/25 px-2 py-0.5 rounded-full">
+                  Counter Bill Ready
+                </span>
+              </div>
+              <div className="text-base font-extrabold truncate mt-0.5">
+                {formatRupee(detectedBill.amount)} • {detectedBill.merchant || "Sharma Super Store"}
+              </div>
+              <div className="text-[11px] text-orange-100 truncate">
+                Tap to pay instantly with 45-Day 0% Pay Later or UPI
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => onPayDetectedBill(detectedBill)}
+              className="px-4 py-2 bg-white text-[#F47920] rounded-xl text-xs font-black shadow-md hover:bg-orange-50 transition cursor-pointer"
+            >
+              Pay Now
+            </button>
+            <button
+              onClick={onClearDetectedBill}
+              className="p-1.5 text-white/75 hover:text-white rounded-lg transition cursor-pointer"
+              title="Dismiss"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Primary Credit Card */}
       <div className="rounded-2xl border border-gray-200 p-5 bg-white shadow-xs">
         <div className="flex items-center justify-between">
@@ -1362,6 +1426,13 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
   const [showKfs, setShowKfs] = useState(false);
   const [showPinScreen, setShowPinScreen] = useState(false);
 
+  // Auto-switch to Bank UPI if customer's BNPL credit limit is insufficient
+  useEffect(() => {
+    if (!isEligible && method === "later") {
+      setMethod("hdfc");
+    }
+  }, [isEligible, method, setMethod]);
+
   return (
     <div className="space-y-6 pt-2">
       <div className="text-center py-4 border-b border-gray-100">
@@ -1379,29 +1450,49 @@ function PaymentView({ amount, merchant, vpa, credit, method, setMethod, onPay }
         <div className="space-y-2.5">
           {/* Buy Now, Pay Later Option */}
           <label
-            onClick={() => setMethod("later")}
-            className={`p-4 rounded-xl border block cursor-pointer transition ${
-              method === "later"
-                ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920]"
-                : "border-gray-200 hover:border-gray-300"
+            onClick={() => {
+              if (isEligible) setMethod("later");
+            }}
+            className={`p-4 rounded-xl border block transition ${
+              !isEligible
+                ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                : method === "later"
+                ? "border-[#F47920] bg-orange-50/40 ring-1 ring-[#F47920] cursor-pointer"
+                : "border-gray-200 hover:border-gray-300 cursor-pointer"
             }`}
           >
             <div className="flex items-start gap-3">
               <input
                 type="radio"
                 name="payopt"
+                disabled={!isEligible}
                 checked={method === "later"}
-                onChange={() => setMethod("later")}
+                onChange={() => {
+                  if (isEligible) setMethod("later");
+                }}
                 className="mt-1 accent-[#F47920]"
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-900">Buy Now, Pay Later</span>
-                  <span className="text-xs font-semibold text-[#F47920]">45-Day 0% Interest</span>
+                  {isEligible ? (
+                    <span className="text-xs font-semibold text-[#F47920]">45-Day 0% Interest</span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                      Limit Exceeded
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
                   Available credit: {formatRupee(credit)} • +25 Reward Points • 45-Day Grace Cycle
                 </div>
+
+                {!isEligible && (
+                  <div className="mt-1.5 text-[11px] font-semibold text-rose-600 flex items-center gap-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    <span>Short by {formatRupee(amount - credit)}. Please pay via linked Bank UPI below.</span>
+                  </div>
+                )}
 
                 {/* Direct KFS trigger on payment option */}
                 <div className="mt-2 pt-2 border-t border-orange-100 flex items-center justify-between text-[11px]">
