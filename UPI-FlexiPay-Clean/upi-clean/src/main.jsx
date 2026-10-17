@@ -271,11 +271,7 @@ function App() {
 
   const handleLogout = () => {
     try {
-      if (currentUser && currentUser.id) {
-        localStorage.removeItem(`flexiTx_${currentUser.id}`);
-        localStorage.removeItem(`flexiCredit_${currentUser.id}`);
-        localStorage.removeItem(`flexiCreditLimit_${currentUser.id}`);
-      }
+      // Clear active session pointers but preserve per-user persistence (flexiTx_userId, flexiCredit_userId)
       localStorage.removeItem("flexipay_user_session");
       localStorage.removeItem("flexiCredit");
       localStorage.removeItem("flexiCreditLimit");
@@ -555,10 +551,32 @@ function App() {
           setCurrentUser(newProfile);
           try {
             localStorage.setItem("flexipay_user_session", JSON.stringify(newProfile));
-            setCreditLimit(newProfile.creditLimit || 60000);
-            setCredit(newProfile.availableCredit || 60000);
-            setTransactions([]);
-            localStorage.setItem(`flexiTx_${newProfile.id}`, JSON.stringify([]));
+            
+            // Check if this user already has prior credit limit & balance saved
+            const savedCredit = localStorage.getItem(`flexiCredit_${newProfile.id}`);
+            const savedLimit = localStorage.getItem(`flexiCreditLimit_${newProfile.id}`);
+            const activeLimit = savedLimit ? Number(savedLimit) : (newProfile.creditLimit || 60000);
+            const activeCredit = savedCredit !== null && !isNaN(Number(savedCredit))
+              ? Number(savedCredit)
+              : (newProfile.availableCredit || 60000);
+
+            setCreditLimit(activeLimit);
+            setCredit(activeCredit);
+
+            // Check if this user has prior transactions saved
+            const savedTx = localStorage.getItem(`flexiTx_${newProfile.id}`);
+            if (savedTx) {
+              const parsed = JSON.parse(savedTx);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setTransactions(parsed.map(normalizeTx).filter(Boolean));
+              } else {
+                setTransactions([]);
+              }
+            } else {
+              setTransactions([]);
+              localStorage.setItem(`flexiTx_${newProfile.id}`, JSON.stringify([]));
+            }
+
             localStorage.removeItem("flexiTx");
           } catch (e) {}
         }}

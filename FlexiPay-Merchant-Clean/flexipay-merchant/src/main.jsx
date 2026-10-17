@@ -133,6 +133,7 @@ function formatRupee(n) {
 function App() {
   const [tab, setTab] = useState("pos"); // "pos" | "transactions" | "offers" | "qr" | "analytics"
   const [sales, setSales] = useState(18450);
+  const [unsettledBalance, setUnsettledBalance] = useState(18450);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [soundboxEnabled, setSoundboxEnabled] = useState(true);
   const [voiceLang, setVoiceLang] = useState("hi-standard"); // "hi-standard" (default) | "hi-ab" | "en-IN"
@@ -145,6 +146,7 @@ function App() {
   };
   const [copiedVpa, setCopiedVpa] = useState(false);
   const [settledToast, setSettledToast] = useState(false);
+  const [settledToastAmount, setSettledToastAmount] = useState(0);
   const [liveSyncToast, setLiveSyncToast] = useState(null);
 
   // POS State
@@ -332,6 +334,7 @@ function App() {
       const custName = payload.customer || "Rutuja Sonawane";
 
       setSales((prev) => prev + amt);
+      setUnsettledBalance((prev) => prev + amt);
       setLastPaidMode(mode);
       setPaid(true);
 
@@ -489,6 +492,7 @@ function App() {
   const handleSimulatePayment = (mode = "Buy Now, Pay Later") => {
     const val = Number(amount) || 2500;
     setSales((s) => s + val);
+    setUnsettledBalance((b) => b + val);
     setLastPaidMode(mode);
 
     const initials = (customer || "WK")
@@ -783,7 +787,13 @@ function App() {
                   title={merchantRole === "owner" ? "Open Settlement & Payout breakdown" : "Cashier cannot initiate bank settlements"}
                 >
                   <Building2 size={13} />
-                  <span>{merchantRole === "owner" ? "Instant Settle to Bank" : "Settle Locked (Cashier)"}</span>
+                  <span>
+                    {merchantRole === "owner"
+                      ? unsettledBalance > 0
+                        ? `Instant Settle (${formatRupee(unsettledBalance)})`
+                        : "All Settled (₹0)"
+                      : "Settle Locked (Cashier)"}
+                  </span>
                 </button>
               </div>
 
@@ -837,7 +847,7 @@ function App() {
         {settledToast && (
           <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-tab-enter">
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-            Payout initiated! {formatRupee(sales)} transferred to HDFC Bank A/C ending in 9921.
+            Payout initiated! {formatRupee(settledToastAmount)} transferred to HDFC Bank A/C ending in 9921.
           </div>
         )}
 
@@ -1377,7 +1387,7 @@ function App() {
             {/* Current Ledger Balance */}
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white space-y-1">
               <span className="text-[11px] text-slate-300 font-medium">Unsettled Gross Balance</span>
-              <div className="text-3xl font-black">{formatRupee(sales)}</div>
+              <div className="text-3xl font-black">{formatRupee(unsettledBalance)}</div>
               <div className="text-[10px] text-emerald-400 flex items-center gap-1 pt-1">
                 <CheckCircle2 size={12} />
                 <span>Verified across {transactions.length} customer collections</span>
@@ -1399,7 +1409,7 @@ function App() {
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">Tomorrow at 7:00 AM • Direct NEFT/RTGS</div>
                 </div>
-                <span className="font-black text-slate-900">{formatRupee(sales)}</span>
+                <span className="font-black text-slate-900">{formatRupee(unsettledBalance)}</span>
               </div>
 
               {/* T+0 Instant Settlement (Real World 0.20% IMPS Fee) */}
@@ -1415,7 +1425,7 @@ function App() {
                     <div className="text-[11px] text-slate-500 mt-0.5">Immediate credit to HDFC A/C ending in 9921</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-black text-[#F47920]">{formatRupee(Math.max(0, sales - Math.round(sales * 0.002)))}</div>
+                    <div className="font-black text-[#F47920]">{formatRupee(Math.max(0, unsettledBalance - Math.round(unsettledBalance * 0.002)))}</div>
                     <div className="text-[10px] text-slate-400">Net to bank</div>
                   </div>
                 </div>
@@ -1424,11 +1434,11 @@ function App() {
                 <div className="p-2.5 bg-white/80 rounded-xl border border-orange-200/80 text-[11px] space-y-1">
                   <div className="flex justify-between text-slate-600">
                     <span>Gross Amount:</span>
-                    <span>{formatRupee(sales)}</span>
+                    <span>{formatRupee(unsettledBalance)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Instant IMPS Switch Fee (0.20%):</span>
-                    <span>-{formatRupee(Math.round(sales * 0.002))}</span>
+                    <span>-{formatRupee(Math.round(unsettledBalance * 0.002))}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>MDR on FlexiPay (0% Promo):</span>
@@ -1436,7 +1446,7 @@ function App() {
                   </div>
                   <div className="flex justify-between font-bold text-slate-900 border-t border-slate-100 pt-1">
                     <span>Net Transfer Amount:</span>
-                    <span className="text-[#F47920]">{formatRupee(Math.max(0, sales - Math.round(sales * 0.002)))}</span>
+                    <span className="text-[#F47920]">{formatRupee(Math.max(0, unsettledBalance - Math.round(unsettledBalance * 0.002)))}</span>
                   </div>
                 </div>
               </div>
@@ -1445,13 +1455,13 @@ function App() {
             {/* Execute Instant Settle Action */}
             <div className="pt-2 space-y-2">
               <button
-                disabled={sales <= 0}
+                disabled={unsettledBalance <= 0}
                 onClick={() => {
-                  const fee = Math.round(sales * 0.002);
-                  const net = Math.max(0, sales - fee);
+                  const fee = Math.round(unsettledBalance * 0.002);
+                  const net = Math.max(0, unsettledBalance - fee);
                   const newEntry = {
                     id: "set_" + Date.now(),
-                    amount: sales,
+                    amount: unsettledBalance,
                     fee,
                     net,
                     type: "T+0 Instant",
@@ -1459,7 +1469,8 @@ function App() {
                     status: "Transferred"
                   };
                   setSettleHistory((prev) => [newEntry, ...prev]);
-                  setSales(0);
+                  setSettledToastAmount(unsettledBalance);
+                  setUnsettledBalance(0);
                   setSettleModalOpen(false);
                   setSettledToast(true);
                   setTimeout(() => setSettledToast(false), 4500);
@@ -1467,7 +1478,7 @@ function App() {
                 className="w-full py-3 bg-[#F47920] hover:bg-[#E06710] disabled:opacity-50 text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-2"
               >
                 <Building2 size={16} />
-                <span>Confirm Instant Payout ({formatRupee(Math.max(0, sales - Math.round(sales * 0.002)))})</span>
+                <span>Confirm Instant Payout ({formatRupee(Math.max(0, unsettledBalance - Math.round(unsettledBalance * 0.002)))})</span>
               </button>
               <p className="text-[10px] text-center text-slate-400">
                 Complies with RBI Master Directions on Payment Aggregators & Merchant Settlements
