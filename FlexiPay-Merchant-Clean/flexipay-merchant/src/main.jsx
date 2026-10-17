@@ -49,6 +49,64 @@ import {
 import "./index.css";
 import { syncPublishBill, syncSubscribePayments, syncPublishOffer, isFirebaseActive } from "./firebaseSync";
 import FirebaseSettingsModal from "./FirebaseSettingsModal";
+import MerchantOnboardingFlow from "./MerchantOnboardingFlow";
+
+// ----------------------------------------------------
+// DEFAULT VERIFIED MERCHANT REGISTRY (Zero Hardcoding Foundation)
+// ----------------------------------------------------
+const DEFAULT_MERCHANTS = [
+  {
+    id: "sharma",
+    slug: "sharma",
+    name: "Sharma Super Store",
+    ownerName: "Omprakash Sharma",
+    phone: "+91 98201 44821",
+    category: "grocery",
+    city: "Mumbai",
+    gstin: "27AABCU9603R1ZM",
+    vpa: "sharma@flexipay",
+    bank: {
+      bankName: "HDFC Bank",
+      accountNumber: "5010048219921",
+      maskedAccount: "•••• 9921",
+      ifsc: "HDFC0000240"
+    },
+    creditLimit: 150000,
+    initialSales: 18450,
+    initialUnsettled: 18450
+  }
+];
+
+function getInitialMerchants() {
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem("flexiMerchants_registry");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+  }
+  return DEFAULT_MERCHANTS;
+}
+
+function getInitialStoreId(merchantsList) {
+  if (typeof window !== "undefined") {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlStore = params.get("store");
+      if (urlStore) {
+        const found = merchantsList.find((m) => m.id === urlStore || m.slug === urlStore);
+        if (found) return found.id;
+      }
+      const saved = localStorage.getItem("flexiActiveStoreId");
+      if (saved && merchantsList.some((m) => m.id === saved)) {
+        return saved;
+      }
+    } catch (e) {}
+  }
+  return merchantsList[0]?.id || "sharma";
+}
 
 // ----------------------------------------------------
 // REALISTIC MERCHANT TRANSACTION DATA (Google Pay Business style)
@@ -132,9 +190,37 @@ function formatRupee(n) {
 
 function App() {
   const [tab, setTab] = useState("pos"); // "pos" | "transactions" | "offers" | "qr" | "analytics"
-  const [sales, setSales] = useState(18450);
-  const [unsettledBalance, setUnsettledBalance] = useState(18450);
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  
+  // Dynamic Multi-Merchant Registry State
+  const [merchants, setMerchants] = useState(getInitialMerchants);
+  const [activeStoreId, setActiveStoreId] = useState(() => getInitialStoreId(merchants));
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showStoreSwitcher, setShowStoreSwitcher] = useState(false);
+
+  const currentMerchant = merchants.find((m) => m.id === activeStoreId || m.slug === activeStoreId) || merchants[0] || DEFAULT_MERCHANTS[0];
+
+  // Namespaced state per active merchant
+  const [sales, setSales] = useState(() => {
+    const saved = localStorage.getItem(`flexiMerchant_${currentMerchant.id}_sales`);
+    return saved !== null && !isNaN(Number(saved)) ? Number(saved) : (currentMerchant.initialSales !== undefined ? currentMerchant.initialSales : 18450);
+  });
+
+  const [unsettledBalance, setUnsettledBalance] = useState(() => {
+    const saved = localStorage.getItem(`flexiMerchant_${currentMerchant.id}_unsettled`);
+    return saved !== null && !isNaN(Number(saved)) ? Number(saved) : (currentMerchant.initialUnsettled !== undefined ? currentMerchant.initialUnsettled : 18450);
+  });
+
+  const [transactions, setTransactions] = useState(() => {
+    const saved = localStorage.getItem(`flexiMerchant_${currentMerchant.id}_tx`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return currentMerchant.id === "sharma" ? INITIAL_TRANSACTIONS : [];
+  });
+
   const [soundboxEnabled, setSoundboxEnabled] = useState(true);
   const [voiceLang, setVoiceLang] = useState("hi-standard"); // "hi-standard" (default) | "hi-ab" | "en-IN"
   const cycleVoice = () => {
@@ -165,17 +251,77 @@ function App() {
 
   // Role Mode: "owner" (Full access: settlements, bank settings, loans) vs "cashier" (Billing + Soundbox only)
   const [merchantRole, setMerchantRole] = useState(() => {
-    return localStorage.getItem("flexiMerchantRole") || "owner";
+    return localStorage.getItem(`flexiMerchant_${currentMerchant.id}_role`) || "owner";
   });
   const [settleModalOpen, setSettleModalOpen] = useState(false);
-  const [settleHistory, setSettleHistory] = useState([
-    { id: "set_9821", amount: 12500, fee: 25, net: 12475, type: "T+0 Instant", time: "Yesterday, 6:45 PM", status: "Transferred" }
-  ]);
+  const [settleHistory, setSettleHistory] = useState(() => {
+    const saved = localStorage.getItem(`flexiMerchant_${currentMerchant.id}_settleHistory`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return currentMerchant.id === "sharma"
+      ? [{ id: "set_9821", amount: 12500, fee: 25, net: 12475, type: "T+0 Instant", time: "Yesterday, 6:45 PM", status: "Transferred" }]
+      : [];
+  });
 
   const toggleMerchantRole = () => {
     const next = merchantRole === "owner" ? "cashier" : "owner";
     setMerchantRole(next);
-    localStorage.setItem("flexiMerchantRole", next);
+    localStorage.setItem(`flexiMerchant_${currentMerchant.id}_role`, next);
+  };
+
+  // Sync Registry and State Persistence per active store
+  useEffect(() => {
+    try {
+      localStorage.setItem("flexiMerchants_registry", JSON.stringify(merchants));
+      localStorage.setItem("flexiActiveStoreId", currentMerchant.id);
+      localStorage.setItem(`flexiMerchant_${currentMerchant.id}_sales`, String(sales));
+      localStorage.setItem(`flexiMerchant_${currentMerchant.id}_unsettled`, String(unsettledBalance));
+      localStorage.setItem(`flexiMerchant_${currentMerchant.id}_tx`, JSON.stringify(transactions));
+      localStorage.setItem(`flexiMerchant_${currentMerchant.id}_settleHistory`, JSON.stringify(settleHistory));
+    } catch (e) {}
+  }, [merchants, currentMerchant.id, sales, unsettledBalance, transactions, settleHistory]);
+
+  // Switch Active Store Handler
+  const handleSwitchStore = (storeId) => {
+    setActiveStoreId(storeId);
+    setShowStoreSwitcher(false);
+    const target = merchants.find((m) => m.id === storeId);
+    if (!target) return;
+
+    const savedSales = localStorage.getItem(`flexiMerchant_${target.id}_sales`);
+    setSales(savedSales !== null && !isNaN(Number(savedSales)) ? Number(savedSales) : (target.initialSales !== undefined ? target.initialSales : 0));
+
+    const savedUnsettled = localStorage.getItem(`flexiMerchant_${target.id}_unsettled`);
+    setUnsettledBalance(savedUnsettled !== null && !isNaN(Number(savedUnsettled)) ? Number(savedUnsettled) : (target.initialUnsettled !== undefined ? target.initialUnsettled : 0));
+
+    const savedTx = localStorage.getItem(`flexiMerchant_${target.id}_tx`);
+    if (savedTx) {
+      try { setTransactions(JSON.parse(savedTx)); } catch (e) { setTransactions([]); }
+    } else {
+      setTransactions(target.id === "sharma" ? INITIAL_TRANSACTIONS : []);
+    }
+
+    const savedHistory = localStorage.getItem(`flexiMerchant_${target.id}_settleHistory`);
+    if (savedHistory) {
+      try { setSettleHistory(JSON.parse(savedHistory)); } catch (e) { setSettleHistory([]); }
+    } else {
+      setSettleHistory(target.id === "sharma" ? [{ id: "set_9821", amount: 12500, fee: 25, net: 12475, type: "T+0 Instant", time: "Yesterday, 6:45 PM", status: "Transferred" }] : []);
+    }
+  };
+
+  // Onboard New Merchant Handler
+  const handleOnboardComplete = (newStore) => {
+    setMerchants((prev) => [newStore, ...prev]);
+    setActiveStoreId(newStore.id);
+    setSales(0);
+    setUnsettledBalance(0);
+    setTransactions([]);
+    setSettleHistory([]);
+    setShowOnboardingModal(false);
   };
 
   // Auto scroll to top on tab change so features are instantly visible without scrolling
@@ -447,7 +593,7 @@ function App() {
   });
 
   const handleCopyVpa = () => {
-    navigator.clipboard.writeText("sharma@flexipay");
+    navigator.clipboard.writeText(currentMerchant.vpa);
     setCopiedVpa(true);
     setTimeout(() => setCopiedVpa(false), 2000);
   };
@@ -460,8 +606,8 @@ function App() {
     // Broadcast generated bill to Consumer App (via Relay Server + localStorage + BroadcastChannel)
     const billPayload = {
       amount: Number(amount),
-      merchant: "Sharma Super Store",
-      vpa: "sharma@flexipay",
+      merchant: currentMerchant.name,
+      vpa: currentMerchant.vpa,
       customer: customer || "Walk-in Customer",
       timestamp: Date.now()
     };
@@ -555,15 +701,20 @@ function App() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-3">
           
-          {/* Store Branding (Mobile-Optimized) */}
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          {/* Store Branding with Multi-Store Switcher Trigger */}
+          <div
+            onClick={() => setShowStoreSwitcher(true)}
+            className="flex items-center gap-2.5 sm:gap-3 min-w-0 cursor-pointer p-1 -m-1 rounded-2xl hover:bg-slate-50 transition group"
+            title="Click to Switch Store or Register New Business"
+          >
             <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
-              S
+              {currentMerchant.name ? currentMerchant.name[0] : "S"}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                  Sharma Super Store
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 truncate group-hover:text-[#F47920] transition flex items-center gap-1">
+                  <span>{currentMerchant.name}</span>
+                  <ChevronDown size={14} className="text-slate-400 group-hover:text-[#F47920]" />
                 </h1>
                 <span className="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.2 rounded-full border border-emerald-200 shrink-0">
                   <ShieldCheck size={11} className="text-emerald-600" /> Verified
@@ -572,15 +723,18 @@ function App() {
               
               <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate mt-0.5">
                 <button
-                  onClick={handleCopyVpa}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyVpa();
+                  }}
                   className="font-mono text-[#F47920] hover:text-[#E06710] flex items-center gap-0.5 cursor-pointer shrink-0"
                   title="Click to copy UPI ID"
                 >
-                  <span>sharma@flexipay</span>
+                  <span>{currentMerchant.vpa}</span>
                   <Copy size={10} />
                 </button>
                 {copiedVpa && <span className="text-emerald-600 font-bold text-[10px]">Copied!</span>}
-                <span className="hidden sm:inline">• GSTIN: 27AABCU9603R1ZM</span>
+                <span className="hidden sm:inline">• GSTIN: {currentMerchant.gstin || "27AABCU9603R1ZM"}</span>
               </div>
             </div>
           </div>
@@ -661,6 +815,16 @@ function App() {
               <span>{merchantRole === "owner" ? "👑 Owner" : "🧑‍💼 Cashier"}</span>
             </button>
 
+            {/* Quick + Store Button */}
+            <button
+              onClick={() => setShowOnboardingModal(true)}
+              className="px-2 sm:px-2.5 py-1 text-[11px] font-bold rounded-xl border border-orange-200 bg-orange-50 text-[#F47920] hover:bg-orange-100 transition flex items-center gap-1 cursor-pointer"
+              title="Register a new store via digital onboarding"
+            >
+              <Plus size={13} />
+              <span className="hidden sm:inline">New Store</span>
+            </button>
+
             {/* Bank Badge (Desktop Only) */}
             <div
               onClick={() => {
@@ -674,7 +838,9 @@ function App() {
               <Building2 size={14} className="text-slate-500" />
               <div className="text-left">
                 <div className="text-[10px] text-slate-400 leading-tight">Settlement</div>
-                <div className="text-xs font-bold text-slate-800 leading-tight">HDFC •••• 9921</div>
+                <div className="text-xs font-bold text-slate-800 leading-tight">
+                  {(currentMerchant.bank?.bankName || "HDFC Bank").split(" ")[0]} {currentMerchant.bank?.maskedAccount || "•••• 9921"}
+                </div>
               </div>
             </div>
           </div>
@@ -1027,7 +1193,7 @@ function App() {
 
                   <div className="p-3 sm:p-4 bg-white border-2 border-slate-200 rounded-2xl inline-block shadow-sm">
                     <QRCodeSVG
-                      value={`upi://pay?pa=sharma@flexipay&pn=Sharma%20Super%20Store&am=${amount}&cu=INR`}
+                      value={`upi://pay?pa=${currentMerchant.vpa}&pn=${encodeURIComponent(currentMerchant.name)}&am=${amount}&cu=INR`}
                       size={180}
                     />
                   </div>
@@ -1133,14 +1299,14 @@ function App() {
 
                   <div className="p-3 sm:p-4 bg-white border border-slate-200 rounded-2xl inline-block shadow-xs">
                     <QRCodeSVG
-                      value="upi://pay?pa=sharma@flexipay&pn=Sharma%20Super%20Store&cu=INR"
+                      value={`upi://pay?pa=${currentMerchant.vpa}&pn=${encodeURIComponent(currentMerchant.name)}&cu=INR`}
                       size={160}
                     />
                   </div>
 
                   <div>
-                    <div className="text-sm sm:text-base font-bold text-slate-900">Sharma Super Store</div>
-                    <div className="text-[11px] font-mono text-slate-500">sharma@flexipay</div>
+                    <div className="text-sm sm:text-base font-bold text-slate-900">{currentMerchant.name}</div>
+                    <div className="text-[11px] font-mono text-slate-500">{currentMerchant.vpa}</div>
                   </div>
 
                   <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
@@ -1168,9 +1334,10 @@ function App() {
         {/* ==================================================== */}
         {tab === "credit" && (
           <StoreCreditTab
+            currentMerchant={currentMerchant}
             sales={sales}
             transactions={transactions}
-            creditLimit={merchantCreditLimit}
+            creditLimit={currentMerchant.creditLimit || merchantCreditLimit}
             borrowed={merchantBorrowed}
             setBorrowed={setMerchantBorrowed}
           />
@@ -1194,7 +1361,7 @@ function App() {
         {/* ==================================================== */}
         {/* TAB 4: COUNTER STANDEE                               */}
         {/* ==================================================== */}
-        {tab === "qr" && <StandeeTab onOpenDisplay={() => setCustomerDisplayOpen(true)} />}
+        {tab === "qr" && <StandeeTab currentMerchant={currentMerchant} onOpenDisplay={() => setCustomerDisplayOpen(true)} />}
 
         {/* ==================================================== */}
         {/* TAB 5: BUSINESS INSIGHTS                             */}
@@ -1226,15 +1393,15 @@ function App() {
           >
             <div className="bg-[#F47920] -mx-6 -mt-6 p-4 rounded-t-3xl text-white">
               <div className="text-[11px] font-bold uppercase tracking-wider opacity-90">Scan to Pay</div>
-              <div className="text-xl font-black mt-0.5">Sharma Super Store</div>
+              <div className="text-xl font-black mt-0.5">{currentMerchant.name}</div>
             </div>
 
             <div className="p-3 bg-white border-2 border-slate-200 rounded-2xl inline-block shadow-sm">
               <QRCodeSVG
                 value={
                   qrGenerated && amount
-                    ? `upi://pay?pa=sharma@flexipay&pn=Sharma%20Super%20Store&am=${amount}&cu=INR`
-                    : `upi://pay?pa=sharma@flexipay&pn=Sharma%20Super%20Store&cu=INR`
+                    ? `upi://pay?pa=${currentMerchant.vpa}&pn=${encodeURIComponent(currentMerchant.name)}&am=${amount}&cu=INR`
+                    : `upi://pay?pa=${currentMerchant.vpa}&pn=${encodeURIComponent(currentMerchant.name)}&cu=INR`
                 }
                 size={220}
               />
@@ -1246,7 +1413,7 @@ function App() {
               ) : (
                 <div className="text-base font-bold text-slate-700">Open Payment Standee</div>
               )}
-              <div className="text-xs font-mono text-slate-500 mt-0.5">UPI ID: sharma@flexipay</div>
+              <div className="text-xs font-mono text-slate-500 mt-0.5">UPI ID: {currentMerchant.vpa}</div>
             </div>
 
             <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-[10px] text-slate-500 font-semibold">
@@ -1373,7 +1540,9 @@ function App() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm sm:text-base">Bank Payout Settlement</h3>
-                  <p className="text-[11px] text-slate-500">Sharma Super Store • HDFC A/C •••• 9921</p>
+                  <p className="text-[11px] text-slate-500">
+                    {currentMerchant.name} • {currentMerchant.bank?.bankName || "HDFC Bank"} A/C {currentMerchant.bank?.maskedAccount || "•••• 9921"}
+                  </p>
                 </div>
               </div>
               <button
@@ -1422,7 +1591,9 @@ function App() {
                         Within 15 Seconds
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">Immediate credit to HDFC A/C ending in 9921</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      Immediate credit to {currentMerchant.bank?.bankName || "HDFC Bank"} A/C {currentMerchant.bank?.maskedAccount || "•••• 9921"}
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className="font-black text-[#F47920]">{formatRupee(Math.max(0, unsettledBalance - Math.round(unsettledBalance * 0.002)))}</div>
@@ -1487,6 +1658,118 @@ function App() {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MULTI-STORE SWITCHER & MANAGEMENT MODAL              */}
+      {/* ---------------------------------------------------- */}
+      {showStoreSwitcher && createPortal(
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          onClick={() => setShowStoreSwitcher(false)}
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl animate-tab-enter my-auto space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-[#F47920] flex items-center justify-center font-bold">
+                  <Store size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">Switch Merchant Terminal</h3>
+                  <p className="text-[11px] text-slate-500">Select active store or register a new business</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowStoreSwitcher(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Store List */}
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {merchants.map((m) => {
+                const isActive = m.id === currentMerchant.id;
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => handleSwitchStore(m.id)}
+                    className={`p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
+                      isActive
+                        ? "border-[#F47920] bg-orange-50/50 shadow-xs ring-1 ring-[#F47920]"
+                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                        isActive ? "bg-[#F47920] text-white" : "bg-slate-100 text-slate-700"
+                      }`}>
+                        {m.name ? m.name[0] : "S"}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">{m.name}</span>
+                          {isActive && (
+                            <span className="text-[9px] font-bold text-[#F47920] bg-white px-1.5 py-0.2 rounded border border-orange-200">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-500 truncate">{m.vpa}</div>
+                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                          {m.bank?.bankName || "HDFC Bank"} • {m.bank?.maskedAccount || "•••• 9921"} • GSTIN: {m.gstin || "Verified"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0">
+                      {isActive ? (
+                        <div className="w-5 h-5 rounded-full bg-[#F47920] text-white flex items-center justify-center">
+                          <Check size={12} strokeWidth={3} />
+                        </div>
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-400">Switch &gt;</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Register New Store Action */}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                onClick={() => {
+                  setShowStoreSwitcher(false);
+                  setShowOnboardingModal(true);
+                }}
+                className="w-full py-3 bg-slate-900 hover:bg-black text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-2"
+              >
+                <Plus size={16} />
+                <span>+ Register New Store (Digital Onboarding)</span>
+              </button>
+              <p className="text-[10px] text-center text-slate-400 mt-2">
+                Simulates real-world merchant KYC, GSTN validation & instant revolving line sanction.
+              </p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* DIGITAL MERCHANT ONBOARDING MODAL FLOW                */}
+      {/* ---------------------------------------------------- */}
+      {showOnboardingModal && (
+        <MerchantOnboardingFlow
+          onComplete={handleOnboardComplete}
+          onCancel={() => setShowOnboardingModal(false)}
+        />
       )}
 
       {/* Cloud Sync Settings Modal for Realtime Cross-Device Testing */}
@@ -1803,7 +2086,12 @@ function OffersTab({ offer, setOffer }) {
 // ----------------------------------------------------
 // AUTHENTIC COUNTER STANDEE VIEW (Responsive Standee)
 // ----------------------------------------------------
-function StandeeTab({ onOpenDisplay }) {
+function StandeeTab({ currentMerchant, onOpenDisplay }) {
+  const store = currentMerchant || {
+    name: "Sharma Super Store",
+    vpa: "sharma@flexipay"
+  };
+
   return (
     <div className="max-w-md mx-auto space-y-4 text-center">
       
@@ -1819,15 +2107,15 @@ function StandeeTab({ onOpenDisplay }) {
         {/* QR Code Container */}
         <div className="p-3 sm:p-4 bg-white border-2 border-slate-200 rounded-2xl inline-block shadow-sm">
           <QRCodeSVG
-            value="upi://pay?pa=sharma@flexipay&pn=Sharma%20Super%20Store&cu=INR"
+            value={`upi://pay?pa=${store.vpa}&pn=${encodeURIComponent(store.name)}&cu=INR`}
             size={190}
           />
         </div>
 
         {/* Store Title & VPA */}
         <div className="mt-3">
-          <div className="text-base sm:text-lg font-extrabold text-slate-900">Sharma Super Store</div>
-          <div className="text-xs font-mono font-semibold text-slate-600 mt-0.5">sharma@flexipay</div>
+          <div className="text-base sm:text-lg font-extrabold text-slate-900">{store.name}</div>
+          <div className="text-xs font-mono font-semibold text-slate-600 mt-0.5">{store.vpa}</div>
         </div>
 
         {/* Supported UPI Apps Row */}
@@ -2875,7 +3163,7 @@ function RepayCreditModal({ borrowed, creditLimit, sales, onClose, onConfirm }) 
 // ----------------------------------------------------
 // STORE WORKING CAPITAL CREDIT LINE TAB (Sprint 3 / PDF Core)
 // ----------------------------------------------------
-function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowed }) {
+function StoreCreditTab({ currentMerchant, sales, transactions, creditLimit, borrowed, setBorrowed }) {
   const [drawModal, setDrawModal] = useState(false);
   const [repayModal, setRepayModal] = useState(false);
   const [successToast, setSuccessToast] = useState("");
@@ -2886,7 +3174,9 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
     setBorrowed(nextBorrowed);
     localStorage.setItem("flexiMerchantBorrowed", String(nextBorrowed));
     setDrawModal(false);
-    setSuccessToast(`✓ Successfully disbursed ${formatRupee(amount)} via IMPS to HDFC Bank A/C •••• 9921!`);
+    const bankName = currentMerchant?.bank?.bankName || "HDFC Bank";
+    const masked = currentMerchant?.bank?.maskedAccount || "•••• 9921";
+    setSuccessToast(`✓ Successfully disbursed ${formatRupee(amount)} via IMPS to ${bankName} A/C ${masked}!`);
     setTimeout(() => setSuccessToast(""), 6000);
   };
 
@@ -2990,7 +3280,7 @@ function StoreCreditTab({ sales, transactions, creditLimit, borrowed, setBorrowe
           <div className="space-y-3 text-xs">
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <div>
-                <div className="font-bold text-slate-900">GSTIN 27AABCU9603R1ZM</div>
+                <div className="font-bold text-slate-900">GSTIN {currentMerchant?.gstin || "27AABCU9603R1ZM"}</div>
                 <div className="text-[10px] text-slate-500">GSTR-3B Average Turnover: ₹4.8 Lakhs / mo</div>
               </div>
               <span className="text-emerald-600 font-bold text-[11px]">Clean</span>
