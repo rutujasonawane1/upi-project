@@ -14,7 +14,9 @@ import {
   FileText,
   Lock,
   ArrowLeft,
-  X
+  X,
+  LogIn,
+  Plus
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -34,7 +36,9 @@ const BANKS = [
   { id: "kotak", name: "Kotak Mahindra Bank", ifscPrefix: "KKBK000" }
 ];
 
-export default function MerchantOnboardingFlow({ onComplete, onCancel }) {
+export default function MerchantOnboardingFlow({ registeredMerchants = [], onComplete }) {
+  // Mode: "gateway" (choose existing store or start new) | "onboard" (3-step wizard)
+  const [mode, setMode] = useState(registeredMerchants.length > 0 ? "gateway" : "onboard");
   const [step, setStep] = useState(1);
 
   // Step 1: Store & Business Details
@@ -89,7 +93,6 @@ export default function MerchantOnboardingFlow({ onComplete, onCancel }) {
   const handleStep2Submit = (e) => {
     e.preventDefault();
     if (!bankVerified) {
-      // Auto-verify if user proceeds
       setBankVerified(true);
     }
     setStep(3);
@@ -133,23 +136,14 @@ export default function MerchantOnboardingFlow({ onComplete, onCancel }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden my-auto animate-tab-enter">
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-3 sm:p-6 font-sans">
+      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col relative animate-tab-enter my-auto">
         
         {/* Top Header */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 sm:p-6 relative">
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition cursor-pointer"
-            >
-              <X size={20} />
-            </button>
-          )}
-
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-orange-500/20 text-[#F47920] border border-orange-500/30">
-              Merchant Digital Onboarding
+              FlexiPay Business Gateway
             </span>
             <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
               ● RBI Master Directions Compliant
@@ -157,42 +151,124 @@ export default function MerchantOnboardingFlow({ onComplete, onCancel }) {
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-            Register Your Business on FlexiPay
+            {mode === "gateway" ? "Merchant POS Terminal Login" : "Register Your Business on FlexiPay"}
           </h2>
           <p className="text-xs text-slate-300 mt-1">
             Accept UPI & 45-Day FlexiPay BNPL payments with zero MDR & instant audio soundbox.
           </p>
 
-          {/* Stepper Dots */}
-          <div className="flex items-center gap-2 mt-4">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex-1 flex items-center gap-1.5">
-                <div
-                  className={`h-1.5 rounded-full flex-1 transition-all duration-300 ${
-                    s <= step ? "bg-[#F47920]" : "bg-slate-700"
-                  }`}
-                />
-              </div>
-            ))}
-          </div>
+          {/* Stepper Dots (only in onboarding mode) */}
+          {mode === "onboard" && (
+            <div className="flex items-center gap-2 mt-4">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="flex-1 flex items-center gap-1.5">
+                  <div
+                    className={`h-1.5 rounded-full flex-1 transition-all duration-300 ${
+                      s <= step ? "bg-[#F47920]" : "bg-slate-700"
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Form Body */}
+        {/* Content Body */}
         <div className="p-5 sm:p-7 space-y-5">
           
-          {/* ---------------------------------------------------- */}
-          {/* STEP 1: BUSINESS & TRADE IDENTITY                    */}
-          {/* ---------------------------------------------------- */}
-          {step === 1 && (
-            <form onSubmit={handleStep1Submit} className="space-y-4 animate-tab-enter">
+          {/* ==================================================== */}
+          {/* GATEWAY MODE: LOGIN TO STORE OR START NEW ONBOARDING */}
+          {/* ==================================================== */}
+          {mode === "gateway" && (
+            <div className="space-y-4 animate-tab-enter">
               <div className="border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Store size={16} className="text-[#F47920]" />
-                  <span>Step 1: Store & Owner Information</span>
+                  <LogIn size={16} className="text-[#F47920]" />
+                  <span>Select Your Business to Open POS</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Enter legal trade details for digital QR generation and tax receipts.
+                  Each store has strict data isolation. Log in to your private terminal.
                 </p>
+              </div>
+
+              {/* Registered Stores List */}
+              <div className="space-y-2.5">
+                {registeredMerchants.map((m) => (
+                  <div
+                    key={m.id}
+                    onClick={() => onComplete(m)}
+                    className="p-3.5 rounded-2xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50/30 transition cursor-pointer flex items-center justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                        {m.name ? m.name[0] : "S"}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-slate-900 truncate group-hover:text-[#F47920] transition">
+                          {m.name}
+                        </div>
+                        <div className="text-xs font-mono text-slate-500 truncate">{m.vpa}</div>
+                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                          {m.bank?.bankName || "HDFC Bank"} • {m.bank?.maskedAccount || "•••• 9921"} • GSTIN: {m.gstin || "Verified"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="px-3.5 py-1.5 bg-slate-900 group-hover:bg-[#F47920] text-white font-bold rounded-xl text-xs transition shrink-0"
+                    >
+                      Open POS &gt;
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Divider & Onboard New Business Action */}
+              <div className="pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("onboard");
+                    setStep(1);
+                  }}
+                  className="w-full py-3 bg-[#F47920] hover:bg-[#E06710] text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-2"
+                >
+                  <Plus size={16} />
+                  <span>Onboard New Business (Digital KYC)</span>
+                </button>
+                <p className="text-[10px] text-center text-slate-400 mt-2">
+                  Instant paperless onboarding for Kirana, Pharmacy, Cafes, and Retail.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ==================================================== */}
+          {/* ONBOARDING MODE: STEP 1 - BUSINESS IDENTITY          */}
+          {/* ==================================================== */}
+          {mode === "onboard" && step === 1 && (
+            <form onSubmit={handleStep1Submit} className="space-y-4 animate-tab-enter">
+              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Store size={16} className="text-[#F47920]" />
+                    <span>Step 1: Store & Owner Information</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Enter legal trade details for digital QR generation and tax receipts.
+                  </p>
+                </div>
+                {registeredMerchants.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMode("gateway")}
+                    className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowLeft size={13} />
+                    <span>Back</span>
+                  </button>
+                )}
               </div>
 
               {/* Store Trade Name */}
@@ -314,10 +390,10 @@ export default function MerchantOnboardingFlow({ onComplete, onCancel }) {
             </form>
           )}
 
-          {/* ---------------------------------------------------- */}
-          {/* STEP 2: SETTLEMENT BANK ACCOUNT & VPA                */}
-          {/* ---------------------------------------------------- */}
-          {step === 2 && (
+          {/* ==================================================== */}
+          {/* ONBOARDING MODE: STEP 2 - BANK & UPI VPA             */}
+          {/* ==================================================== */}
+          {mode === "onboard" && step === 2 && (
             <form onSubmit={handleStep2Submit} className="space-y-4 animate-tab-enter">
               <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
                 <div>
@@ -457,10 +533,10 @@ export default function MerchantOnboardingFlow({ onComplete, onCancel }) {
             </form>
           )}
 
-          {/* ---------------------------------------------------- */}
-          {/* STEP 3: SANCTION WORKING CAPITAL LINE & LAUNCH      */}
-          {/* ---------------------------------------------------- */}
-          {step === 3 && (
+          {/* ==================================================== */}
+          {/* ONBOARDING MODE: STEP 3 - LINE SANCTION & LAUNCH    */}
+          {/* ==================================================== */}
+          {mode === "onboard" && step === 3 && (
             <div className="space-y-4 animate-tab-enter text-center">
               <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
                 <CheckCircle2 size={32} />
@@ -516,7 +592,7 @@ export default function MerchantOnboardingFlow({ onComplete, onCancel }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-                  <span>Role Permissions: Switch between Cashier and Owner modes anytime</span>
+                  <span>Private isolated session: Staff Cashier mode & Owner Bank settlements</span>
                 </div>
               </div>
 

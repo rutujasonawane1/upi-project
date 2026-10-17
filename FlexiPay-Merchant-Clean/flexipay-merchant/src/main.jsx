@@ -44,7 +44,8 @@ import {
   ArrowLeft,
   Lock,
   MessageSquare,
-  Cloud
+  Cloud,
+  LogOut
 } from "lucide-react";
 import "./index.css";
 import { syncPublishBill, syncSubscribePayments, syncPublishOffer, isFirebaseActive } from "./firebaseSync";
@@ -90,23 +91,41 @@ function getInitialMerchants() {
   return DEFAULT_MERCHANTS;
 }
 
-function getInitialStoreId(merchantsList) {
+function getInitialMerchant() {
   if (typeof window !== "undefined") {
     try {
+      const registry = getInitialMerchants();
       const params = new URLSearchParams(window.location.search);
       const urlStore = params.get("store");
       if (urlStore) {
-        const found = merchantsList.find((m) => m.id === urlStore || m.slug === urlStore);
-        if (found) return found.id;
+        const found = registry.find((m) => m.id === urlStore || m.slug === urlStore);
+        if (found) {
+          localStorage.setItem("flexipay_merchant_session", JSON.stringify(found));
+          localStorage.setItem("flexiActiveStoreId", found.id);
+          return found;
+        }
       }
-      const saved = localStorage.getItem("flexiActiveStoreId");
-      if (saved && merchantsList.some((m) => m.id === saved)) {
-        return saved;
+      const savedSession = localStorage.getItem("flexipay_merchant_session");
+      if (savedSession) {
+        const parsed = JSON.parse(savedSession);
+        if (parsed && parsed.id) {
+          const inReg = registry.find((m) => m.id === parsed.id);
+          return inReg || parsed;
+        }
+      }
+      const savedActive = localStorage.getItem("flexiActiveStoreId");
+      if (savedActive) {
+        const found = registry.find((m) => m.id === savedActive);
+        if (found) {
+          localStorage.setItem("flexipay_merchant_session", JSON.stringify(found));
+          return found;
+        }
       }
     } catch (e) {}
   }
-  return merchantsList[0]?.id || "sharma";
+  return null;
 }
+
 
 // ----------------------------------------------------
 // REALISTIC MERCHANT TRANSACTION DATA (Google Pay Business style)
@@ -188,16 +207,8 @@ function formatRupee(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
 }
 
-function App() {
+function MerchantTerminal({ currentMerchant, onLogout }) {
   const [tab, setTab] = useState("pos"); // "pos" | "transactions" | "offers" | "qr" | "analytics"
-  
-  // Dynamic Multi-Merchant Registry State
-  const [merchants, setMerchants] = useState(getInitialMerchants);
-  const [activeStoreId, setActiveStoreId] = useState(() => getInitialStoreId(merchants));
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [showStoreSwitcher, setShowStoreSwitcher] = useState(false);
-
-  const currentMerchant = merchants.find((m) => m.id === activeStoreId || m.slug === activeStoreId) || merchants[0] || DEFAULT_MERCHANTS[0];
 
   // Namespaced state per active merchant
   const [sales, setSales] = useState(() => {
@@ -276,53 +287,14 @@ function App() {
   // Sync Registry and State Persistence per active store
   useEffect(() => {
     try {
-      localStorage.setItem("flexiMerchants_registry", JSON.stringify(merchants));
       localStorage.setItem("flexiActiveStoreId", currentMerchant.id);
       localStorage.setItem(`flexiMerchant_${currentMerchant.id}_sales`, String(sales));
       localStorage.setItem(`flexiMerchant_${currentMerchant.id}_unsettled`, String(unsettledBalance));
       localStorage.setItem(`flexiMerchant_${currentMerchant.id}_tx`, JSON.stringify(transactions));
       localStorage.setItem(`flexiMerchant_${currentMerchant.id}_settleHistory`, JSON.stringify(settleHistory));
     } catch (e) {}
-  }, [merchants, currentMerchant.id, sales, unsettledBalance, transactions, settleHistory]);
+  }, [currentMerchant.id, sales, unsettledBalance, transactions, settleHistory]);
 
-  // Switch Active Store Handler
-  const handleSwitchStore = (storeId) => {
-    setActiveStoreId(storeId);
-    setShowStoreSwitcher(false);
-    const target = merchants.find((m) => m.id === storeId);
-    if (!target) return;
-
-    const savedSales = localStorage.getItem(`flexiMerchant_${target.id}_sales`);
-    setSales(savedSales !== null && !isNaN(Number(savedSales)) ? Number(savedSales) : (target.initialSales !== undefined ? target.initialSales : 0));
-
-    const savedUnsettled = localStorage.getItem(`flexiMerchant_${target.id}_unsettled`);
-    setUnsettledBalance(savedUnsettled !== null && !isNaN(Number(savedUnsettled)) ? Number(savedUnsettled) : (target.initialUnsettled !== undefined ? target.initialUnsettled : 0));
-
-    const savedTx = localStorage.getItem(`flexiMerchant_${target.id}_tx`);
-    if (savedTx) {
-      try { setTransactions(JSON.parse(savedTx)); } catch (e) { setTransactions([]); }
-    } else {
-      setTransactions(target.id === "sharma" ? INITIAL_TRANSACTIONS : []);
-    }
-
-    const savedHistory = localStorage.getItem(`flexiMerchant_${target.id}_settleHistory`);
-    if (savedHistory) {
-      try { setSettleHistory(JSON.parse(savedHistory)); } catch (e) { setSettleHistory([]); }
-    } else {
-      setSettleHistory(target.id === "sharma" ? [{ id: "set_9821", amount: 12500, fee: 25, net: 12475, type: "T+0 Instant", time: "Yesterday, 6:45 PM", status: "Transferred" }] : []);
-    }
-  };
-
-  // Onboard New Merchant Handler
-  const handleOnboardComplete = (newStore) => {
-    setMerchants((prev) => [newStore, ...prev]);
-    setActiveStoreId(newStore.id);
-    setSales(0);
-    setUnsettledBalance(0);
-    setTransactions([]);
-    setSettleHistory([]);
-    setShowOnboardingModal(false);
-  };
 
   // Auto scroll to top on tab change so features are instantly visible without scrolling
   useEffect(() => {
@@ -701,20 +673,17 @@ function App() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-3">
           
-          {/* Store Branding with Multi-Store Switcher Trigger */}
+          {/* Store Branding (Strict Private Terminal Isolation) */}
           <div
-            onClick={() => setShowStoreSwitcher(true)}
-            className="flex items-center gap-2.5 sm:gap-3 min-w-0 cursor-pointer p-1 -m-1 rounded-2xl hover:bg-slate-50 transition group"
-            title="Click to Switch Store or Register New Business"
+            className="flex items-center gap-2.5 sm:gap-3 min-w-0 p-1 -m-1"
           >
             <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[#F47920] text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-sm shrink-0">
               {currentMerchant.name ? currentMerchant.name[0] : "S"}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 truncate group-hover:text-[#F47920] transition flex items-center gap-1">
-                  <span>{currentMerchant.name}</span>
-                  <ChevronDown size={14} className="text-slate-400 group-hover:text-[#F47920]" />
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                  {currentMerchant.name}
                 </h1>
                 <span className="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.2 rounded-full border border-emerald-200 shrink-0">
                   <ShieldCheck size={11} className="text-emerald-600" /> Verified
@@ -815,14 +784,14 @@ function App() {
               <span>{merchantRole === "owner" ? "👑 Owner" : "🧑‍💼 Cashier"}</span>
             </button>
 
-            {/* Quick + Store Button */}
+            {/* Logout Store Terminal Button */}
             <button
-              onClick={() => setShowOnboardingModal(true)}
-              className="px-2 sm:px-2.5 py-1 text-[11px] font-bold rounded-xl border border-orange-200 bg-orange-50 text-[#F47920] hover:bg-orange-100 transition flex items-center gap-1 cursor-pointer"
-              title="Register a new store via digital onboarding"
+              onClick={onLogout}
+              className="px-2 sm:px-2.5 py-1 text-[11px] font-bold rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition flex items-center gap-1 cursor-pointer"
+              title="Logout of this store's private terminal"
             >
-              <Plus size={13} />
-              <span className="hidden sm:inline">New Store</span>
+              <LogOut size={13} />
+              <span className="hidden sm:inline">Logout Store</span>
             </button>
 
             {/* Bank Badge (Desktop Only) */}
@@ -1660,118 +1629,6 @@ function App() {
         document.body
       )}
 
-      {/* ---------------------------------------------------- */}
-      {/* MULTI-STORE SWITCHER & MANAGEMENT MODAL              */}
-      {/* ---------------------------------------------------- */}
-      {showStoreSwitcher && createPortal(
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
-          onClick={() => setShowStoreSwitcher(false)}
-        >
-          <div
-            className="bg-white rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl animate-tab-enter my-auto space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-orange-100 text-[#F47920] flex items-center justify-center font-bold">
-                  <Store size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">Switch Merchant Terminal</h3>
-                  <p className="text-[11px] text-slate-500">Select active store or register a new business</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowStoreSwitcher(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Store List */}
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-              {merchants.map((m) => {
-                const isActive = m.id === currentMerchant.id;
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => handleSwitchStore(m.id)}
-                    className={`p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
-                      isActive
-                        ? "border-[#F47920] bg-orange-50/50 shadow-xs ring-1 ring-[#F47920]"
-                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
-                        isActive ? "bg-[#F47920] text-white" : "bg-slate-100 text-slate-700"
-                      }`}>
-                        {m.name ? m.name[0] : "S"}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">{m.name}</span>
-                          {isActive && (
-                            <span className="text-[9px] font-bold text-[#F47920] bg-white px-1.5 py-0.2 rounded border border-orange-200">
-                              Active
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] font-mono text-slate-500 truncate">{m.vpa}</div>
-                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                          {m.bank?.bankName || "HDFC Bank"} • {m.bank?.maskedAccount || "•••• 9921"} • GSTIN: {m.gstin || "Verified"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0">
-                      {isActive ? (
-                        <div className="w-5 h-5 rounded-full bg-[#F47920] text-white flex items-center justify-center">
-                          <Check size={12} strokeWidth={3} />
-                        </div>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-400">Switch &gt;</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Register New Store Action */}
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                onClick={() => {
-                  setShowStoreSwitcher(false);
-                  setShowOnboardingModal(true);
-                }}
-                className="w-full py-3 bg-slate-900 hover:bg-black text-white font-extrabold rounded-xl text-xs sm:text-sm transition cursor-pointer shadow-md flex items-center justify-center gap-2"
-              >
-                <Plus size={16} />
-                <span>+ Register New Store (Digital Onboarding)</span>
-              </button>
-              <p className="text-[10px] text-center text-slate-400 mt-2">
-                Simulates real-world merchant KYC, GSTN validation & instant revolving line sanction.
-              </p>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* ---------------------------------------------------- */}
-      {/* DIGITAL MERCHANT ONBOARDING MODAL FLOW                */}
-      {/* ---------------------------------------------------- */}
-      {showOnboardingModal && (
-        <MerchantOnboardingFlow
-          onComplete={handleOnboardComplete}
-          onCancel={() => setShowOnboardingModal(false)}
-        />
-      )}
-
       {/* Cloud Sync Settings Modal for Realtime Cross-Device Testing */}
       <FirebaseSettingsModal
         isOpen={showCloudSettings}
@@ -1781,6 +1638,58 @@ function App() {
         }}
       />
     </div>
+  );
+}
+
+// ----------------------------------------------------
+// ROOT APP COMPONENT (Merchant Gateway & Session Isolation Guard)
+// ----------------------------------------------------
+export default function App() {
+  const [merchants, setMerchants] = useState(getInitialMerchants);
+  const [currentMerchant, setCurrentMerchant] = useState(getInitialMerchant);
+
+  const handleSelectMerchant = (merchant) => {
+    setMerchants((prev) => {
+      const exists = prev.some((m) => m.id === merchant.id);
+      const updated = exists ? prev : [merchant, ...prev];
+      try {
+        localStorage.setItem("flexiMerchants_registry", JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    try {
+      localStorage.setItem("flexipay_merchant_session", JSON.stringify(merchant));
+      localStorage.setItem("flexiActiveStoreId", merchant.id);
+    } catch (e) {}
+    setCurrentMerchant(merchant);
+  };
+
+  const handleLogoutMerchant = () => {
+    try {
+      localStorage.removeItem("flexipay_merchant_session");
+      localStorage.removeItem("flexiActiveStoreId");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("store");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+    } catch (e) {}
+    setCurrentMerchant(null);
+  };
+
+  if (!currentMerchant) {
+    return (
+      <MerchantOnboardingFlow
+        registeredMerchants={merchants}
+        onComplete={handleSelectMerchant}
+      />
+    );
+  }
+
+  return (
+    <MerchantTerminal
+      key={currentMerchant.id}
+      currentMerchant={currentMerchant}
+      onLogout={handleLogoutMerchant}
+    />
   );
 }
 
